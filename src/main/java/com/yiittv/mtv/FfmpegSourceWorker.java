@@ -1,5 +1,6 @@
 package com.yiittv.mtv;
 
+import org.bytedeco.javacv.FFmpegFrameFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
@@ -231,6 +232,8 @@ final class FfmpegSourceWorker implements SourceWorker {
             if (separateAudio) {
                 sideAudioThread = startSideAudio(live.audio(), plugin.audio().sampleRate());
             }
+            FFmpegFrameFilter scaler = createScaler(grabber);
+            try {
 
             if (grabber.getImageWidth() <= 0 || grabber.getImageHeight() <= 0) {
                 throw new IllegalStateException("video dimensions are missing");
@@ -326,9 +329,25 @@ final class FfmpegSourceWorker implements SourceWorker {
                     continue;
                 }
                 nextPublish = now + interval;
-                BufferedImage image = converter.convert(frame);
+                Frame picture = frame;
+                if (scaler != null) {
+                    scaler.push(frame);
+                    picture = scaler.pull();
+                    if (picture == null || picture.image == null) {
+                        continue;
+                    }
+                }
+                BufferedImage image = converter.convert(picture);
                 if (image != null) {
                     sharedSource.publish(copyFrame(image));
+                }
+            }
+            } finally {
+                if (scaler != null) {
+                    try {
+                        scaler.close();
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }
@@ -490,13 +509,54 @@ final class FfmpegSourceWorker implements SourceWorker {
         return output;
     }
 
+    /**
+     * Downscales decoded video with FFmpeg's native scaler to the largest screen size, so
+     * Java never copies or resizes full-resolution frames. Returns null when not needed.
+     */
+    private FFmpegFrameFilter createScaler(FFmpegFrameGrabber grabber) {
+        int sourceWidth = grabber.getImageWidth();
+        int sourceHeight = grabber.getImageHeight();
+        int[] target = sharedSource.targetPixelSize();
+        if (target[0] < 1 || target[1] < 1
+                || (sourceWidth <= target[0] && sourceHeight <= target[1])) {
+            return null;
+        }
+        try {
+            return scaler(sourceWidth, sourceHeight, grabber.getPixelFormat(),
+                    grabber.getFrameRate(), target[0], target[1]);
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    /** Native "fit inside" scaler; package-private for tests. */
+    static FFmpegFrameFilter scaler(int sourceWidth, int sourceHeight, int pixelFormat,
+                                    double frameRate, int targetWidth, int targetHeight)
+            throws Exception {
+        double scale = Math.min(targetWidth / (double) sourceWidth,
+                targetHeight / (double) sourceHeight);
+        int width = Math.max(2, (int) Math.round(sourceWidth * scale) & ~1);
+        int height = Math.max(2, (int) Math.round(sourceHeight * scale) & ~1);
+        FFmpegFrameFilter filter = new FFmpegFrameFilter(
+                "scale=" + width + ":" + height + ":flags=fast_bilinear,format=bgr24",
+                sourceWidth, sourceHeight);
+        filter.setPixelFormat(pixelFormat);
+        filter.setFrameRate(frameRate > 0 && Double.isFinite(frameRate) ? frameRate : 30);
+        filter.start();
+        return filter;
+    }
+
     private static String compactError(Exception exception) {
         String message = exception.getMessage();
         if (message == null || message.isBlank()) {
             return exception.getClass().getSimpleName();
         }
         if (message.contains("Could not open input")) {
-            return "source offline";
+            // Keep FFmpeg's error code (e.g. 403, invalid data) but never the stream URL.
+            java.util.regex.Matcher code = java.util.regex.Pattern
+                    .compile("error (-?\\d+)").matcher(message);
+            return code.find() ? "source offline (ffmpeg " + code.group(1) + ")"
+                    : "source offline";
         }
         message = StreamUrlSanitizer.mask(message);
         return message.length() > 100 ? message.substring(0, 100) : message;

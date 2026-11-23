@@ -149,6 +149,19 @@ final class SharedMediaSource {
         }
     }
 
+    /** Largest pixel size among enabled screens; frames never need to be bigger. */
+    int[] targetPixelSize() {
+        int width = 0;
+        int height = 0;
+        for (ManagedScreen screen : screens) {
+            if (screen.enabled()) {
+                width = Math.max(width, screen.pixelWidth());
+                height = Math.max(height, screen.pixelHeight());
+            }
+        }
+        return new int[]{width, height};
+    }
+
     double targetFps() {
         StudioWebServer web = plugin.webStudio();
         boolean webPreview = web != null && web.previewRequested();
