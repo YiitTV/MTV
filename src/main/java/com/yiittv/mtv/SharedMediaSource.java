@@ -21,6 +21,7 @@ final class SharedMediaSource {
     private volatile long nextWebPreviewNanos;
     private AudioFramer audioFramer;
     private ScreenAudioOutput.AudioFrameEncoder audioEncoder;
+    private long nextEncoderAttemptNanos;
 
     SharedMediaSource(MtvPlugin plugin, ScreenSource source) {
         this.plugin = plugin;
@@ -69,7 +70,8 @@ final class SharedMediaSource {
         if (!pauseWithoutViewers) {
             return true;
         }
-        return screens.stream().anyMatch(screen -> screen.enabled() && screen.hasViewers());
+        return screens.stream().anyMatch(screen -> screen.enabled()
+                && (screen.hasViewers() || (screen.audioEnabled() && screen.hasAudioListeners())));
     }
 
     /** True when at least one attached, playing screen should emit audio. */
@@ -85,11 +87,17 @@ final class SharedMediaSource {
         synchronized (audioLock) {
             ScreenAudioManager audio = plugin.audio();
             if (audioEncoder == null) {
-                audioEncoder = audio.createEncoder();
-                audioFramer = new AudioFramer(audio.sampleRate(), audio.volume());
-                if (audioEncoder == null) {
+                long now = System.nanoTime();
+                if (now < nextEncoderAttemptNanos) {
                     return;
                 }
+                audioEncoder = audio.createEncoder();
+                if (audioEncoder == null) {
+                    // Plasmo Voice may still be starting; retry at most once per second.
+                    nextEncoderAttemptNanos = now + TimeUnit.SECONDS.toNanos(1);
+                    return;
+                }
+                audioFramer = new AudioFramer(audio.sampleRate(), audio.volume());
             }
             ScreenAudioOutput.AudioFrameEncoder encoder = audioEncoder;
             audioFramer.accept(samples, count, frame -> {
@@ -114,6 +122,7 @@ final class SharedMediaSource {
             }
             audioEncoder = null;
             audioFramer = null;
+            nextEncoderAttemptNanos = 0;
         }
         for (ManagedScreen screen : screens) {
             plugin.audio().flush(screen.id());

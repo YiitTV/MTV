@@ -7,6 +7,7 @@ import su.plo.voice.api.addon.InjectPlasmoVoice;
 import su.plo.voice.api.addon.annotation.Addon;
 import su.plo.voice.api.audio.codec.AudioEncoder;
 import su.plo.voice.api.audio.codec.CodecException;
+import su.plo.voice.api.encryption.EncryptionException;
 import su.plo.voice.api.server.PlasmoVoiceServer;
 import su.plo.voice.api.server.audio.line.ServerSourceLine;
 import su.plo.voice.api.server.audio.provider.AudioFrameProvider;
@@ -110,8 +111,12 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
             @Override
             public byte[] encode(short[] samples) {
                 try {
-                    return encoder.encode(samples);
-                } catch (CodecException exception) {
+                    byte[] encoded = encoder.encode(samples);
+                    // Plasmo Voice expects encoded *and* encrypted frames. The key can change
+                    // (for example behind a proxy), so it is looked up for every frame.
+                    return encoded == null ? null
+                            : server.getDefaultEncryption().encrypt(encoded);
+                } catch (CodecException | EncryptionException | RuntimeException exception) {
                     return null;
                 }
             }
@@ -173,34 +178,43 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
     private static final class Channel implements ScreenAudioChannel, AudioFrameProvider {
 
         private static final int MAX_BUFFERED_FRAMES = 50;
+        private static final long END_OF_STREAM_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
 
         private final ServerSourceLine line;
         private final ServerStaticSource source;
         private final BlockingQueue<byte[]> frames = new ArrayBlockingQueue<>(MAX_BUFFERED_FRAMES);
         private volatile AudioSender sender;
         private volatile boolean closed;
+        private long lastFrameNanos = System.nanoTime();
+        private boolean streamEnded = true;
 
         private Channel(ServerSourceLine line, ServerStaticSource source) {
             this.line = line;
             this.source = source;
         }
 
+        /**
+         * Called from Plasmo's shared coroutine pool, so it must never block. An empty
+         * queue returns {@code Provided(null)}, which makes the sender wait 5 ms; after a
+         * longer gap one {@code EndOfStream} resets the sender's clock.
+         */
         @Override
         public AudioFrameResult provide20ms() {
             if (closed) {
                 return AudioFrameResult.Finished.INSTANCE;
             }
-            try {
-                byte[] frame = frames.poll(20, TimeUnit.MILLISECONDS);
-                if (frame != null) {
-                    return new AudioFrameResult.Provided(frame);
-                }
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                return AudioFrameResult.Finished.INSTANCE;
+            byte[] frame = frames.poll();
+            long now = System.nanoTime();
+            if (frame != null) {
+                lastFrameNanos = now;
+                streamEnded = false;
+                return new AudioFrameResult.Provided(frame);
             }
-            return closed ? AudioFrameResult.Finished.INSTANCE
-                    : AudioFrameResult.EndOfStream.INSTANCE;
+            if (!streamEnded && now - lastFrameNanos >= END_OF_STREAM_NANOS) {
+                streamEnded = true;
+                return AudioFrameResult.EndOfStream.INSTANCE;
+            }
+            return new AudioFrameResult.Provided(null);
         }
 
         @Override

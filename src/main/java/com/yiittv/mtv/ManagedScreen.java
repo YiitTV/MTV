@@ -47,6 +47,7 @@ final class ManagedScreen {
     private volatile IDrawingSpace drawing;
     private volatile boolean audioEnabled;
     private volatile int audioDistance = 32;
+    private volatile boolean audioListeners;
     private boolean glowing;
     private boolean dithering;
     private FullSpacedColorBuffer previousFrame;
@@ -182,6 +183,11 @@ final class ManagedScreen {
         return audioDistance;
     }
 
+    /** True when a player is within the audio distance, even if outside view distance. */
+    boolean hasAudioListeners() {
+        return audioListeners;
+    }
+
     World world() {
         return displayWorld;
     }
@@ -230,10 +236,18 @@ final class ManagedScreen {
         boolean addedViewer = false;
 
         ScreenDefinition currentDefinition = definition;
+        double audioDistanceSquared = (double) audioDistance * audioDistance;
+        boolean listeners = false;
         for (ViewerPosition viewer : onlinePlayers) {
             Player player = viewer.player();
             if (viewer.world() != currentWorld) {
                 continue;
+            }
+            if (audioEnabled && !listeners) {
+                double ax = viewer.x() - centerX;
+                double ay = viewer.y() - centerY;
+                double az = viewer.z() - centerZ;
+                listeners = ax * ax + ay * ay + az * az <= audioDistanceSquared;
             }
             if (!ScreenPermissions.canView(player, currentDefinition)) {
                 continue;
@@ -262,6 +276,7 @@ final class ManagedScreen {
             spawnedViewers.remove(uuid);
         }
         receiverSnapshot = List.copyOf(receivers);
+        audioListeners = listeners;
         if (addedViewer) {
             forceFullFrame.set(true);
         }

@@ -165,6 +165,11 @@ Audio is off by default and is enabled per screen:
 - Screens sharing one source share one decoder and one Opus encoder; each
   screen gets its own emitter at the centre of its map wall.
 - Images, MJPEG cameras and GIFs have no audio.
+- The decoder keeps running while a player is within the audio distance, even
+  outside the viewer distance.
+- Turning audio on or off reconnects that source, so local and YouTube videos
+  restart from the beginning.
+- Cloning a screen copies its audio settings.
 - Global settings live under `audio:` in `config.yml` (`enabled`,
   `default-enabled`, `default-distance`, `volume`). Web Studio can stage
   `audio.enabled` and `audio.distance` per screen.

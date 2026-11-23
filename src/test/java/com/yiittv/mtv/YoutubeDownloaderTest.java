@@ -2,7 +2,6 @@ package com.yiittv.mtv;
 
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,11 +43,14 @@ class YoutubeDownloaderTest {
     @Test
     void buildsACanonicalCommandWithoutUserText() {
         List<String> command = YoutubeDownloader.command("yt-dlp", "18", "500M",
-                Path.of("media", "youtube", "abc.download.mp4"), "dQw4w9WgXcQ");
+                "dQw4w9WgXcQ");
         assertEquals("yt-dlp", command.getFirst());
         assertEquals("--", command.get(command.size() - 2));
         assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", command.getLast());
         assertTrue(command.contains("--no-playlist"));
+        int output = command.indexOf("-o");
+        assertEquals("dQw4w9WgXcQ.download.%(ext)s", command.get(output + 1));
+        assertTrue(command.contains("--merge-output-format"));
         assertEquals("youtube/dQw4w9WgXcQ.mp4", YoutubeDownloader.mediaPath("dQw4w9WgXcQ"));
     }
 }

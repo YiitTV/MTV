@@ -788,6 +788,8 @@ final class StudioService {
         try (var paths = Files.walk(root)) {
             paths.filter(Files::isRegularFile)
                     .filter(path -> !path.startsWith(root.resolve(".thumbnails")))
+                    .filter(path -> !path.getFileName().toString()
+                            .contains(YoutubeDownloader.DOWNLOAD_MARKER))
                     .forEach(path -> result.add(inspect(root, path)));
         } catch (IOException exception) {
             plugin.getLogger().warning("Media Library scan failed: " + exception.getMessage());

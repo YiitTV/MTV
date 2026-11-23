@@ -289,6 +289,14 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
             return false;
         }
         persist(clone);
+        ConfigurationSection audioSettings = getConfig().getConfigurationSection(
+                "screens." + source.id() + ".audio");
+        if (audioSettings != null) {
+            for (String key : audioSettings.getKeys(false)) {
+                getConfig().set("screens." + normalizedClone + ".audio." + key,
+                        audioSettings.get(key));
+            }
+        }
         saveConfig();
         ManagedScreen screen = register(clone, world);
         screen.showOfflineFrame(messages.plain(

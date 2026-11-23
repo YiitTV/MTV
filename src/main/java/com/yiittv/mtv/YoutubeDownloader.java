@@ -8,6 +8,9 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
+import java.util.stream.Stream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -102,22 +105,31 @@ final class YoutubeDownloader {
         return FOLDER + "/" + videoId + ".mp4";
     }
 
+    /** Marker in file names of unfinished downloads; the Media Library skips them. */
+    static final String DOWNLOAD_MARKER = ".download.";
+
+    /**
+     * Builds the yt-dlp command. The output template is relative to the process working
+     * directory, so server paths containing '%' are never interpreted as template fields.
+     */
     static List<String> command(String executable, String format, String maxFileSize,
-                                Path outputTemplate, String videoId) {
+                                String videoId) {
         List<String> command = new ArrayList<>();
         command.add(executable);
         command.add("--no-playlist");
         command.add("--no-progress");
         command.add("--no-part");
-        command.add("--restrict-filenames");
+        command.add("--no-mtime");
         command.add("-f");
         command.add(format);
+        command.add("--merge-output-format");
+        command.add("mp4");
         if (maxFileSize != null && !maxFileSize.isBlank()) {
             command.add("--max-filesize");
             command.add(maxFileSize);
         }
         command.add("-o");
-        command.add(outputTemplate.toString());
+        command.add(videoId + DOWNLOAD_MARKER + "%(ext)s");
         command.add("--");
         command.add("https://www.youtube.com/watch?v=" + videoId);
         return command;
@@ -157,28 +169,31 @@ final class YoutubeDownloader {
         String maxSize = plugin.getConfig().getString("youtube.max-filesize", "500M");
         long timeout = Math.max(30, plugin.getConfig().getLong("youtube.timeout-seconds", 600));
         Path directory = target.getParent();
-        Path temporary = directory.resolve(videoId + ".download.mp4");
+        Process process = null;
         try {
             Files.createDirectories(directory);
-            Files.deleteIfExists(temporary);
-            Process process = new ProcessBuilder(command(
+            deletePartial(directory, videoId);
+            process = new ProcessBuilder(command(
                     executable == null || executable.isBlank() ? "yt-dlp" : executable.trim(),
-                    format, maxSize, temporary, videoId))
+                    format, maxSize, videoId))
                     .directory(directory.toFile())
                     .redirectErrorStream(true)
                     .start();
             StringBuilder log = new StringBuilder();
-            Thread reader = Thread.ofVirtual().start(() -> readTail(process.getInputStream(), log));
+            Process started = process;
+            Thread reader = Thread.ofVirtual().start(() -> readTail(started.getInputStream(), log));
             if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
-                process.destroyForcibly();
                 return Result.failed("yt-dlp timed out after " + timeout + "s");
             }
             reader.join(2_000);
-            if (process.exitValue() != 0 || !Files.isRegularFile(temporary)) {
-                Files.deleteIfExists(temporary);
-                return Result.failed(lastLine(log, "yt-dlp exited with code " + process.exitValue()));
+            Path downloaded = finishedDownload(directory, videoId);
+            if (process.exitValue() != 0 || downloaded == null) {
+                String fallback = process.exitValue() == 0
+                        ? "yt-dlp produced no file (check youtube.max-filesize and youtube.format)"
+                        : "yt-dlp exited with code " + process.exitValue();
+                return Result.failed(lastLine(log, fallback));
             }
-            Files.move(temporary, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.move(downloaded, target, StandardCopyOption.REPLACE_EXISTING);
             return Result.ok(mediaPath(videoId), false);
         } catch (IOException exception) {
             String message = exception.getMessage() == null ? "" : exception.getMessage();
@@ -188,6 +203,46 @@ final class YoutubeDownloader {
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return Result.failed("download interrupted");
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.descendants().forEach(ProcessHandle::destroyForcibly);
+                process.destroyForcibly();
+            }
+            deletePartial(directory, videoId);
+        }
+    }
+
+    private static Path finishedDownload(Path directory, String videoId) throws IOException {
+        try (Stream<Path> files = Files.list(directory)) {
+            return files.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String name = path.getFileName().toString();
+                        return name.startsWith(videoId + DOWNLOAD_MARKER)
+                                && !name.endsWith(".part") && !name.endsWith(".ytdl");
+                    })
+                    .max(Comparator.comparingLong(YoutubeDownloader::size))
+                    .orElse(null);
+        }
+    }
+
+    private static void deletePartial(Path directory, String videoId) {
+        if (directory == null || !Files.isDirectory(directory)) {
+            return;
+        }
+        try (Stream<Path> files = Files.list(directory)) {
+            for (Path path : files.filter(path -> path.getFileName().toString()
+                    .startsWith(videoId + DOWNLOAD_MARKER)).toList()) {
+                Files.deleteIfExists(path);
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static long size(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException ignored) {
+            return -1;
         }
     }
 
