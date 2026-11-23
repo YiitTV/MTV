@@ -21,7 +21,12 @@ class QualityPresetTest {
 
     @Test
     void buildsResolutionCappedFormats() {
-        assertEquals("best[height<=720]/best", QualityPreset.liveFormat(720));
+        assertEquals("best[height<=720]/bv*[height<=720]+ba/bv*+ba/best",
+                QualityPreset.liveFormat(720));
+        assertEquals("best[height<=480]/bv*[height<=480]+ba/bv*+ba/best",
+                LiveStreamResolver.format("best[height<=480]/best"));
+        assertEquals("best", LiveStreamResolver.format("best"));
+        assertEquals(LiveStreamResolver.DEFAULT_FORMAT, LiveStreamResolver.format(" "));
         assertTrue(QualityPreset.youtubeFormat(360).startsWith("18/"));
         assertTrue(QualityPreset.youtubeFormat(1080).contains("[height<=1080]"));
         assertTrue(QualityPreset.youtubeFormat(1080).endsWith("/b"));

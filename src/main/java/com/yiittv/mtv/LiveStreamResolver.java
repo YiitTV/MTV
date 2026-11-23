@@ -16,10 +16,32 @@ import java.util.concurrent.TimeUnit;
  */
 final class LiveStreamResolver {
 
-    static final String DEFAULT_FORMAT = "best[height<=480]/best";
+    /**
+     * Combined stream first (Twitch, Kick, older YouTube lives), otherwise separate video
+     * and audio playlists (current YouTube lives).
+     */
+    static final String DEFAULT_FORMAT =
+            "best[height<=480]/bv*[height<=480]+ba/bv*+ba/best";
     static final String NOT_LIVE = "this YouTube video is not live; use /mtv source <billboard> youtube <link>";
 
     private LiveStreamResolver() {
+    }
+
+    private static final java.util.regex.Pattern COMBINED_ONLY =
+            java.util.regex.Pattern.compile("best\\[height<=(\\d{3,4})]/best");
+
+    /**
+     * Upgrades the old combined-only format (saved in existing config.yml files), which fails
+     * on YouTube lives that only offer separate video and audio playlists.
+     */
+    static String format(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_FORMAT;
+        }
+        String value = configured.trim();
+        java.util.regex.Matcher matcher = COMBINED_ONLY.matcher(value);
+        return matcher.matches()
+                ? QualityPreset.liveFormat(Integer.parseInt(matcher.group(1))) : value;
     }
 
     /** Returns a canonical https page URL for supported platforms, or empty. */
@@ -90,7 +112,18 @@ final class LiveStreamResolver {
     }
 
     /** Runs yt-dlp and returns the first stream address it prints. Blocking. */
-    static String resolve(String executable, String format, String page, long timeoutSeconds)
+    /**
+     * Stream addresses for one live page. YouTube often serves live video and audio as
+     * separate HLS playlists; Twitch and Kick serve one combined playlist.
+     */
+    record LiveStream(String video, String audio) {
+        boolean separateAudio() {
+            return audio != null && !audio.isBlank();
+        }
+    }
+
+    /** Runs yt-dlp and returns the stream address(es). Blocking. */
+    static LiveStream resolve(String executable, String format, String page, long timeoutSeconds)
             throws IOException, InterruptedException {
         String canonical = canonicalPage(page)
                 .orElseThrow(() -> new IOException("unsupported live link"));
@@ -110,43 +143,41 @@ final class LiveStreamResolver {
                 }
                 output = new String(input.readNBytes(65_536), StandardCharsets.UTF_8);
             }
-            String error = null;
-            Boolean live = null;
-            for (String line : output.split("\\R")) {
-                String trimmed = line.trim();
-                if (live == null && (trimmed.equals("True") || trimmed.equals("False")
-                        || trimmed.equals("NA"))) {
-                    live = trimmed.equals("True");
-                    continue;
-                }
-                if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
-                    if (process.exitValue() == 0) {
-                        if (Boolean.FALSE.equals(live) && canonical.contains("youtube.com/watch")) {
-                            throw new IOException(NOT_LIVE);
-                        }
-                        return trimmed;
-                    }
-                }
-                if (trimmed.startsWith("ERROR")) {
-                    error = trimmed;
-                }
-            }
-            if (error != null && canonical.contains("youtube.com/watch")
-                    && error.contains("Requested format is not available")) {
-                // Regular uploads have no combined audio+video stream to play live.
-                throw new IOException(NOT_LIVE);
-            }
-            if (error != null && error.toLowerCase(Locale.ROOT).contains("offline")) {
-                throw new IOException("the channel is offline");
-            }
-            throw new IOException(error == null ? "no stream address (is the channel live?)"
-                    : error.length() > 160 ? error.substring(0, 160) : error);
+            return parse(output, process.exitValue(), canonical);
         } finally {
             if (process.isAlive()) {
                 process.descendants().forEach(ProcessHandle::destroyForcibly);
                 process.destroyForcibly();
             }
         }
+    }
+
+    static LiveStream parse(String output, int exitCode, String canonical) throws IOException {
+        String error = null;
+        Boolean live = null;
+        List<String> urls = new ArrayList<>();
+        for (String line : output.split("\\R")) {
+            String trimmed = line.trim();
+            if (trimmed.equals("True") || trimmed.equals("False")) {
+                live = trimmed.equals("True");
+            } else if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+                urls.add(trimmed);
+            } else if (trimmed.startsWith("ERROR")) {
+                error = trimmed;
+            }
+        }
+        if (exitCode == 0 && !urls.isEmpty()) {
+            if (Boolean.FALSE.equals(live) && canonical.contains("youtube.com/watch")) {
+                throw new IOException(NOT_LIVE);
+            }
+            // With "bv+ba" yt-dlp prints the video playlist first, then the audio playlist.
+            return new LiveStream(urls.getFirst(), urls.size() > 1 ? urls.get(1) : null);
+        }
+        if (error != null && error.toLowerCase(Locale.ROOT).contains("offline")) {
+            throw new IOException("the channel is offline");
+        }
+        throw new IOException(error == null ? "no stream address (is the channel live?)"
+                : error.length() > 160 ? error.substring(0, 160) : error);
     }
 
     private static boolean isHost(String host, String domain) {

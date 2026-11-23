@@ -35,6 +35,7 @@ final class FfmpegSourceWorker implements SourceWorker {
     private final AtomicLong reconnects = new AtomicLong();
     private final AtomicLong lastFrameAt = new AtomicLong();
     private short[] audioScratch = new short[0];
+    private volatile Thread sideAudioThread;
 
     private ExecutorService executor;
 
@@ -208,6 +209,7 @@ final class FfmpegSourceWorker implements SourceWorker {
         try {
             return receiveFrames();
         } finally {
+            stopSideAudio();
             sharedSource.resetAudio();
         }
     }
@@ -215,14 +217,20 @@ final class FfmpegSourceWorker implements SourceWorker {
     private ReceiveResult receiveFrames() throws Exception {
         state.set("connecting");
         reconnects.incrementAndGet();
-        String input = source.type() == SourceType.LIVE
-                ? resolveLive()
-                : plugin.resolveSourceInput(source);
+        LiveStreamResolver.LiveStream live = source.type() == SourceType.LIVE
+                ? resolveLive() : null;
+        String input = live != null ? live.video() : plugin.resolveSourceInput(source);
         try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input);
              Java2DFrameConverter converter = new Java2DFrameConverter()) {
             boolean audio = sharedSource.wantsAudio();
-            configure(grabber, audio, plugin.audio().sampleRate());
+            // YouTube lives deliver audio as its own playlist: decode it on a second grabber.
+            boolean separateAudio = audio && live != null && live.separateAudio();
+            boolean inlineAudio = audio && !separateAudio;
+            configure(grabber, inlineAudio, plugin.audio().sampleRate());
             grabber.start();
+            if (separateAudio) {
+                sideAudioThread = startSideAudio(live.audio(), plugin.audio().sampleRate());
+            }
 
             if (grabber.getImageWidth() <= 0 || grabber.getImageHeight() <= 0) {
                 throw new IllegalStateException("video dimensions are missing");
@@ -258,7 +266,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                     }
                 }
 
-                Frame frame = audio ? grabber.grab() : grabber.grabImage();
+                Frame frame = inlineAudio ? grabber.grab() : grabber.grabImage();
                 if (frame == null) {
                     if (source.type().loopsAtEnd() && !loopSeekPending) {
                         grabber.setTimestamp(0);
@@ -272,7 +280,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                     }
                     throw new IllegalStateException("source ended");
                 }
-                boolean hasAudio = audio && frame.samples != null && frame.samples.length > 0;
+                boolean hasAudio = inlineAudio && frame.samples != null && frame.samples.length > 0;
                 boolean hasImage = frame.image != null
                         && frame.imageWidth > 0 && frame.imageHeight > 0;
                 if (!hasAudio && !hasImage) {
@@ -327,15 +335,83 @@ final class FfmpegSourceWorker implements SourceWorker {
         return ReceiveResult.STOPPED;
     }
 
-    private String resolveLive() throws Exception {
+    /**
+     * Decodes a separate live audio playlist (YouTube) next to the video grabber. Paced to
+     * real time like the video, so both stay roughly aligned.
+     */
+    private Thread startSideAudio(String url, int sampleRate) {
+        return Thread.ofPlatform().daemon().name("MTV-live-audio").start(() -> {
+            try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(url)) {
+                configure(grabber, true, sampleRate);
+                grabber.start();
+                long firstTimestamp = -1;
+                long started = 0;
+                short[] scratch = new short[0];
+                while (running.get() && !Thread.currentThread().isInterrupted()) {
+                    Frame frame = grabber.grabSamples();
+                    if (frame == null) {
+                        return;
+                    }
+                    if (frame.samples == null || frame.samples.length == 0
+                            || !(frame.samples[0] instanceof ShortBuffer buffer)) {
+                        continue;
+                    }
+                    if (frame.timestamp >= 0) {
+                        if (firstTimestamp < 0) {
+                            firstTimestamp = frame.timestamp;
+                            started = System.nanoTime();
+                        }
+                        long target = started + Math.max(0, frame.timestamp - firstTimestamp) * 1_000L;
+                        if (frame.timestamp < firstTimestamp
+                                || target - System.nanoTime() > TimeUnit.SECONDS.toNanos(2)) {
+                            firstTimestamp = frame.timestamp;
+                            started = System.nanoTime();
+                            target = started;
+                        }
+                        if (!sleepUntil(target)) {
+                            return;
+                        }
+                    }
+                    ShortBuffer view = buffer.duplicate();
+                    int count = view.remaining();
+                    if (count < 1) {
+                        continue;
+                    }
+                    if (scratch.length < count) {
+                        scratch = new short[count];
+                    }
+                    view.get(scratch, 0, count);
+                    sharedSource.publishAudio(scratch, count);
+                }
+            } catch (Exception ignored) {
+                // The video grabber owns reconnects; audio simply stops until the next one.
+            }
+        });
+    }
+
+    private void stopSideAudio() {
+        Thread thread = sideAudioThread;
+        sideAudioThread = null;
+        if (thread == null) {
+            return;
+        }
+        thread.interrupt();
+        try {
+            thread.join(TimeUnit.SECONDS.toMillis(Math.max(1, ioTimeoutSeconds + 1)));
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private LiveStreamResolver.LiveStream resolveLive() throws Exception {
         state.set("resolving live stream");
         String executable = plugin.getConfig().getString("youtube.yt-dlp-path", "yt-dlp");
         String format = plugin.getConfig().getString("live.format",
                 LiveStreamResolver.DEFAULT_FORMAT);
         long timeout = Math.max(10, plugin.getConfig().getLong("live.resolve-timeout-seconds", 30));
-        String address = LiveStreamResolver.resolve(
+        LiveStreamResolver.LiveStream address = LiveStreamResolver.resolve(
                 executable == null || executable.isBlank() ? "yt-dlp" : executable.trim(),
-                format == null || format.isBlank() ? LiveStreamResolver.DEFAULT_FORMAT : format.trim(),
+                LiveStreamResolver.format(format),
                 source.value(), timeout);
         state.set("connecting");
         return address;

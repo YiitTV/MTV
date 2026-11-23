@@ -45,4 +45,33 @@ class LiveStreamResolverTest {
         assertEquals("--", command.get(command.size() - 2));
         assertTrue(command.contains("is_live"));
     }
+
+    @Test
+    void parsesSeparateYoutubeVideoAndAudioPlaylists() throws Exception {
+        LiveStreamResolver.LiveStream stream = LiveStreamResolver.parse(
+                "True\nhttps://v.example/video.m3u8\nhttps://v.example/audio.m3u8\n", 0,
+                "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        assertEquals("https://v.example/video.m3u8", stream.video());
+        assertEquals("https://v.example/audio.m3u8", stream.audio());
+        assertTrue(stream.separateAudio());
+
+        LiveStreamResolver.LiveStream combined = LiveStreamResolver.parse(
+                "True\nhttps://twitch.example/index.m3u8\n", 0, "https://www.twitch.tv/abc");
+        assertFalse(combined.separateAudio());
+    }
+
+    @Test
+    void reportsRealErrorsInsteadOfGuessingNotLive() {
+        java.io.IOException notLive = org.junit.jupiter.api.Assertions.assertThrows(
+                java.io.IOException.class, () -> LiveStreamResolver.parse(
+                        "False\nhttps://v.example/a\n", 0,
+                        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+        assertEquals(LiveStreamResolver.NOT_LIVE, notLive.getMessage());
+
+        java.io.IOException format = org.junit.jupiter.api.Assertions.assertThrows(
+                java.io.IOException.class, () -> LiveStreamResolver.parse(
+                        "ERROR: [youtube] x: Requested format is not available\n", 1,
+                        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+        assertTrue(format.getMessage().contains("Requested format"));
+    }
 }

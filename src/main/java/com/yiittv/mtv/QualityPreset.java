@@ -51,6 +51,7 @@ enum QualityPreset {
     }
 
     static String liveFormat(int height) {
-        return "best[height<=" + height + "]/best";
+        String cap = "[height<=" + height + "]";
+        return "best" + cap + "/bv*" + cap + "+ba/bv*+ba/best";
     }
 }
