@@ -60,9 +60,9 @@ commands:
   screen-removed: "<green>Screen <screen> was removed.</green>"
   all-started: "<green>Enabled <count> screen(s).</green>"
   all-stopped: "<green>Disabled <count> screen(s).</green>"
-  set-usage: "<red>Usage: /mtv set <name> <url|fps|distance|enabled|permission> <value></red>"
+  set-usage: "<red>Usage: /mtv set <name> <url|fps|distance|enabled|permission|audio|audio-distance> <value></red>"
   set-success: "<green>Updated <property> for screen <screen>.</green>"
-  set-invalid: "<red>Invalid value for <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission: true/false.</red>"
+  set-invalid: "<red>Invalid value for <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission/audio: true/false, audio-distance: 4-512.</red>"
   source-usage: "<red>Usage: /mtv source <name> <rtmp|mjpeg|video|image|url-image|gif> <value></red>"
   source-current: "<gray>Screen <screen> uses <white><type></white>: <value></gray>"
   source-types: "<gray>Available source types: <types></gray>"
@@ -89,7 +89,7 @@ commands:
   help-control: "<white>/mtv list|status [name]|start|stop <name|all>|remove <name>|reload</white>"
   help-source: "<white>/mtv source <name> <type> <value></white><gray> - switches RTMP, MJPEG, video, image, URL image or GIF</gray>"
   help-playback: "<white>/mtv playlist ... | /mtv event ...</white><gray> - rotates media or plays a manual event scene</gray>"
-  help-set: "<white>/mtv set <name> <url|fps|distance|enabled|permission> <value></white>"
+  help-set: "<white>/mtv set <name> <url|fps|distance|enabled|permission|audio|audio-distance> <value></white>"
   help-debug: "<white>/mtv debug</white><gray> - toggles the live performance boss bar and sidebar</gray>"
   help-mediamtx: "<white>/mtv mediamtx <argument></white><gray> - generates a guided MediaMTX configuration</gray>"
   mediamtx-argument: "situation"
@@ -98,6 +98,7 @@ status:
   no-display: "<gray>No screen has been created.</gray>"
   missing: "<red>Screen <screen> does not exist.</red>"
   summary: "<gray><screens> screen(s), <enabled> enabled, <sources> shared source(s), <maps> total maps. Use /mtv list or /mtv status <name>.</gray>"
+  audio: "<gray>Audio for <screen>: <enabled>, distance: <distance> blocks, emitter: <emitter>. Plasmo Voice: <backend></gray>"
   line: "<gray>Screen <name> <width>x<height>, enabled: <enabled>, protected: <permission_required> (<view_permission>), source: <source_type> <source_value>, playlist: <playlist>, playback: <playback>, state: <stream>, shared by: <shared>, source error: <stream_error>, effective FPS: <fps>, distance: <distance>, viewers: <viewers>, received/rendered: <received>/<rendered>, render error: <render_error>, world: <world>, facing: <facing></gray>"
 
 playback:

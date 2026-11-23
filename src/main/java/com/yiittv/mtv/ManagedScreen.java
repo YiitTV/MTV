@@ -45,6 +45,8 @@ final class ManagedScreen {
     private volatile int maxDeltaMaps;
     private volatile IMapDisplay display;
     private volatile IDrawingSpace drawing;
+    private volatile boolean audioEnabled;
+    private volatile int audioDistance = 32;
     private boolean glowing;
     private boolean dithering;
     private FullSpacedColorBuffer previousFrame;
@@ -165,6 +167,35 @@ final class ManagedScreen {
         }
         return !receiverSnapshot.isEmpty()
                 && receiverSnapshot.stream().allMatch(player -> player.hasPermission(permission));
+    }
+
+    void updateAudio(boolean enabled, int distance) {
+        audioEnabled = enabled;
+        audioDistance = distance;
+    }
+
+    boolean audioEnabled() {
+        return audioEnabled;
+    }
+
+    int audioDistance() {
+        return audioDistance;
+    }
+
+    World world() {
+        return displayWorld;
+    }
+
+    /** Centre of the map wall, used as the audio emitter position. */
+    double[] center() {
+        IMapDisplay current = display;
+        if (current == null) {
+            return null;
+        }
+        return new double[]{
+                (current.box().getMinX() + current.box().getMaxX()) / 2.0,
+                (current.box().getMinY() + current.box().getMaxY()) / 2.0,
+                (current.box().getMinZ() + current.box().getMaxZ()) / 2.0};
     }
 
     boolean hasViewers() {

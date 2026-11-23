@@ -47,6 +47,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
     private final Map<String, SharedMediaSource> sources = new ConcurrentHashMap<>();
     private final Map<String, ScreenSource> activeSources = new ConcurrentHashMap<>();
     private final java.util.Set<String> frameOnlyScreens = ConcurrentHashMap.newKeySet();
+    private final ScreenAudioManager audio = new ScreenAudioManager(this);
     private MapEngineApi mapEngine;
     private DebugBossBarManager debugBossBars;
     private MediaMtxSetupManager mediaMtxSetup;
@@ -94,6 +95,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         migrateLegacyScreen();
         loadScreens();
         saveConfig();
+        audio.start();
         startRenderExecutor();
         viewerTask = Bukkit.getScheduler().runTaskTimer(this, this::refreshViewers, 20L, 20L);
         playbackController.reload();
@@ -136,12 +138,43 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         }
         requestStopAllSources();
         stopAllSources();
+        audio.stop();
         destroyScreens();
         stopRenderExecutor();
     }
 
     LocalizationManager messages() {
         return messages;
+    }
+
+    ScreenAudioManager audio() {
+        return audio;
+    }
+
+    ScreenAudioManager.ScreenAudioSettings screenAudio(String id) {
+        return audio.settings(id);
+    }
+
+    boolean setScreenAudio(String id, boolean enabled) {
+        String normalized = ScreenDefinition.normalizeId(id);
+        if (!screens.containsKey(normalized)) {
+            return false;
+        }
+        getConfig().set("screens." + normalized + ".audio.enabled", enabled);
+        saveConfig();
+        audio.sync(screens.values());
+        return true;
+    }
+
+    boolean setScreenAudioDistance(String id, double distance) {
+        String normalized = ScreenDefinition.normalizeId(id);
+        if (!screens.containsKey(normalized) || !ScreenAudioManager.validDistance(distance)) {
+            return false;
+        }
+        getConfig().set("screens." + normalized + ".audio.distance", (int) Math.round(distance));
+        saveConfig();
+        audio.sync(screens.values());
+        return true;
     }
 
     StudioService studio() {
@@ -275,6 +308,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         screens.remove(normalized);
         activeSources.remove(normalized);
         frameOnlyScreens.remove(normalized);
+        audio.close(normalized);
         screen.destroy();
         getConfig().set("screens." + normalized, null);
         saveConfig();
@@ -501,9 +535,11 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
             createMediaDirectory();
             messages.load();
             configureFfmpegLogging();
+            audio.reloadSettings();
             migrateLegacyScreen();
             reconcileScreens(readScreens());
             saveConfig();
+            audio.sync(screens.values());
             startRenderExecutor();
             scheduleViewerRefresh();
             if (playbackController != null) {
@@ -1127,6 +1163,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         for (ManagedScreen screen : screens.values()) {
             screen.refreshViewers(onlinePlayers);
         }
+        audio.sync(screens.values());
     }
 
     private void startEnabledSources() {

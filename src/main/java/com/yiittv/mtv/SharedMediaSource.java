@@ -16,8 +16,11 @@ final class SharedMediaSource {
     private final CopyOnWriteArraySet<ManagedScreen> screens = new CopyOnWriteArraySet<>();
     private final AtomicReference<BufferedImage> webPreview = new AtomicReference<>();
     private final AtomicLong webPreviewVersion = new AtomicLong();
+    private final Object audioLock = new Object();
     private volatile SourceWorker worker;
     private volatile long nextWebPreviewNanos;
+    private AudioFramer audioFramer;
+    private ScreenAudioOutput.AudioFrameEncoder audioEncoder;
 
     SharedMediaSource(MtvPlugin plugin, ScreenSource source) {
         this.plugin = plugin;
@@ -36,6 +39,7 @@ final class SharedMediaSource {
 
     void detach(ManagedScreen screen) {
         screens.remove(screen);
+        plugin.audio().flush(screen.id());
     }
 
     boolean isUnused() {
@@ -66,6 +70,54 @@ final class SharedMediaSource {
             return true;
         }
         return screens.stream().anyMatch(screen -> screen.enabled() && screen.hasViewers());
+    }
+
+    /** True when at least one attached, playing screen should emit audio. */
+    boolean wantsAudio() {
+        if (!plugin.audio().available()) {
+            return false;
+        }
+        return screens.stream().anyMatch(screen -> screen.enabled() && screen.audioEnabled());
+    }
+
+    /** Accepts decoded mono 16-bit PCM at {@link ScreenAudioManager#sampleRate()}. */
+    void publishAudio(short[] samples, int count) {
+        synchronized (audioLock) {
+            ScreenAudioManager audio = plugin.audio();
+            if (audioEncoder == null) {
+                audioEncoder = audio.createEncoder();
+                audioFramer = new AudioFramer(audio.sampleRate(), audio.volume());
+                if (audioEncoder == null) {
+                    return;
+                }
+            }
+            ScreenAudioOutput.AudioFrameEncoder encoder = audioEncoder;
+            audioFramer.accept(samples, count, frame -> {
+                byte[] encoded = encoder.encode(frame);
+                if (encoded == null) {
+                    return;
+                }
+                for (ManagedScreen screen : screens) {
+                    if (screen.enabled() && screen.audioEnabled()) {
+                        audio.offer(screen.id(), encoded);
+                    }
+                }
+            });
+        }
+    }
+
+    /** Releases the encoder; called whenever the decoder disconnects or stops. */
+    void resetAudio() {
+        synchronized (audioLock) {
+            if (audioEncoder != null) {
+                audioEncoder.close();
+            }
+            audioEncoder = null;
+            audioFramer = null;
+        }
+        for (ManagedScreen screen : screens) {
+            plugin.audio().flush(screen.id());
+        }
     }
 
     double targetFps() {

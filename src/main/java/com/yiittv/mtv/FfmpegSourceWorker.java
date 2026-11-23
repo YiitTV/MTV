@@ -2,10 +2,13 @@ package com.yiittv.mtv;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.Java2DFrameConverter;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.nio.Buffer;
+import java.nio.ShortBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +34,7 @@ final class FfmpegSourceWorker implements SourceWorker {
     private final AtomicInteger sourceHeight = new AtomicInteger();
     private final AtomicLong reconnects = new AtomicLong();
     private final AtomicLong lastFrameAt = new AtomicLong();
+    private short[] audioScratch = new short[0];
 
     private ExecutorService executor;
 
@@ -167,7 +171,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                     }
                     ReceiveResult result = receive();
                     retryDelay = reconnectDelaySeconds;
-                    if (result == ReceiveResult.LOOP) {
+                    if (result == ReceiveResult.LOOP || result == ReceiveResult.RECONFIGURE) {
                         showConnecting = false;
                         continue;
                     }
@@ -176,6 +180,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                         continue;
                     }
                 } catch (Exception exception) {
+                    sharedSource.resetAudio();
                     if (running.get()) {
                         showConnecting = true;
                         state.set("waiting for source");
@@ -192,6 +197,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                 }
             }
         } finally {
+            sharedSource.resetAudio();
             running.set(false);
             terminated.set(true);
             state.set("stopped");
@@ -199,12 +205,21 @@ final class FfmpegSourceWorker implements SourceWorker {
     }
 
     private ReceiveResult receive() throws Exception {
+        try {
+            return receiveFrames();
+        } finally {
+            sharedSource.resetAudio();
+        }
+    }
+
+    private ReceiveResult receiveFrames() throws Exception {
         state.set("connecting");
         reconnects.incrementAndGet();
         String input = plugin.resolveSourceInput(source);
         try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input);
              Java2DFrameConverter converter = new Java2DFrameConverter()) {
-            configure(grabber);
+            boolean audio = sharedSource.wantsAudio();
+            configure(grabber, audio, plugin.audio().sampleRate());
             grabber.start();
 
             if (grabber.getImageWidth() <= 0 || grabber.getImageHeight() <= 0) {
@@ -225,6 +240,7 @@ final class FfmpegSourceWorker implements SourceWorker {
             long playbackStarted = 0;
             long firstTimestamp = -1;
             boolean loopSeekPending = false;
+            long nextAudioCheck = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
 
             while (running.get()) {
                 if (!sharedSource.shouldDecode()) {
@@ -232,8 +248,15 @@ final class FfmpegSourceWorker implements SourceWorker {
                     lastError.set("none");
                     return ReceiveResult.PAUSED;
                 }
+                if (System.nanoTime() >= nextAudioCheck) {
+                    nextAudioCheck = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+                    if (sharedSource.wantsAudio() != audio) {
+                        // Audio was switched on or off for a screen: reopen with the new setup.
+                        return ReceiveResult.RECONFIGURE;
+                    }
+                }
 
-                Frame frame = grabber.grabImage();
+                Frame frame = audio ? grabber.grab() : grabber.grabImage();
                 if (frame == null) {
                     if (source.type().loopsAtEnd() && !loopSeekPending) {
                         grabber.setTimestamp(0);
@@ -247,7 +270,10 @@ final class FfmpegSourceWorker implements SourceWorker {
                     }
                     throw new IllegalStateException("source ended");
                 }
-                if (frame.image == null || frame.imageWidth <= 0 || frame.imageHeight <= 0) {
+                boolean hasAudio = audio && frame.samples != null && frame.samples.length > 0;
+                boolean hasImage = frame.image != null
+                        && frame.imageWidth > 0 && frame.imageHeight > 0;
+                if (!hasAudio && !hasImage) {
                     continue;
                 }
                 loopSeekPending = false;
@@ -261,6 +287,13 @@ final class FfmpegSourceWorker implements SourceWorker {
                             + Math.max(0, frame.timestamp - firstTimestamp) * 1_000L;
                     if (!sleepUntil(target)) {
                         return ReceiveResult.STOPPED;
+                    }
+                }
+
+                if (hasAudio) {
+                    publishAudio(frame.samples[0]);
+                    if (!hasImage) {
+                        continue;
                     }
                 }
 
@@ -281,9 +314,31 @@ final class FfmpegSourceWorker implements SourceWorker {
         return ReceiveResult.STOPPED;
     }
 
-    private void configure(FFmpegFrameGrabber grabber) {
+    private void publishAudio(Buffer samples) {
+        if (!(samples instanceof ShortBuffer buffer)) {
+            return;
+        }
+        ShortBuffer view = buffer.duplicate();
+        int count = view.remaining();
+        if (count < 1) {
+            return;
+        }
+        if (audioScratch.length < count) {
+            audioScratch = new short[count];
+        }
+        view.get(audioScratch, 0, count);
+        sharedSource.publishAudio(audioScratch, count);
+    }
+
+    private void configure(FFmpegFrameGrabber grabber, boolean audio, int sampleRate) {
         if (source.type() == SourceType.RTMP) {
             grabber.setFormat("flv");
+        }
+        if (audio) {
+            // Plasmo Voice expects 16-bit mono PCM at its configured sample rate.
+            grabber.setSampleMode(FrameGrabber.SampleMode.SHORT);
+            grabber.setAudioChannels(1);
+            grabber.setSampleRate(sampleRate);
         }
         if (source.usesRemoteLocation()) {
             grabber.setOption("analyzeduration", "10000000");
@@ -348,6 +403,7 @@ final class FfmpegSourceWorker implements SourceWorker {
     private enum ReceiveResult {
         PAUSED,
         LOOP,
+        RECONFIGURE,
         STOPPED
     }
 }

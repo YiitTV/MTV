@@ -835,6 +835,7 @@ final class StudioWebServer {
     private boolean allowedDraftPath(String path) {
         if (path == null || path.length() > 180 || path.contains("..")) return false;
         return path.matches("screens\\.[a-z0-9_-]{1,32}\\.(fps|distance|enabled|permission-required|playlist)")
+                || path.matches("screens\\.[a-z0-9_-]{1,32}\\.audio\\.(enabled|distance)")
                 || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.(default-duration|history-window|category-history-window)")
                 || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.items\\.[a-z0-9_-]{1,32}\\.(type|value|text|weight|duration|cooldown|enabled|guaranteed-after|category)")
                 || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.items\\.[a-z0-9_-]{1,32}\\.conditions\\.(min-online|max-online|min-viewers|max-viewers|any-viewer-permission|all-viewers-permission|tps-above|tps-below|world|chance)")
@@ -884,6 +885,11 @@ final class StudioWebServer {
             return false;
         }
         if (path.endsWith(".fps")) return numberBetween(value, 0.1, 20);
+        if (path.endsWith(".audio.distance")) {
+            return numberBetween(value, ScreenAudioManager.MIN_DISTANCE,
+                    ScreenAudioManager.MAX_DISTANCE);
+        }
+        if (path.endsWith(".audio.enabled")) return value instanceof Boolean;
         if (path.endsWith(".distance")) return numberBetween(value, 8, 1024);
         if (path.equals("performance.max-map-updates-per-second")) {
             return numberBetween(value, 1, 100_000);

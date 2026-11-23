@@ -173,6 +173,10 @@ final class StudioWebSnapshot {
             item.put("distance", definition.distance());
             item.put("permissionRequired", definition.permissionRequired());
             item.put("viewPermission", ScreenPermissions.viewNode(id));
+            ScreenAudioManager.ScreenAudioSettings audio = plugin.screenAudio(id);
+            item.put("audioEnabled", audio.enabled());
+            item.put("audioDistance", audio.distance());
+            item.put("audioActive", plugin.audio().channelOpen(id));
             item.put("sourceType", source.type().id());
             item.put("source", source.displayValue());
             item.put("playlist", definition.playlist());
@@ -343,7 +347,8 @@ final class StudioWebSnapshot {
                         "performance.pause-rendering-without-viewers", true),
                 "maxMapUpdates", plugin.getConfig().getInt(
                         "performance.max-map-updates-per-second", 400),
-                "mediaDirectory", plugin.mediaDirectoryDisplay());
+                "mediaDirectory", plugin.mediaDirectoryDisplay(),
+                "audio", plugin.audio().status());
     }
 
     private Map<String, Object> webSummary() {

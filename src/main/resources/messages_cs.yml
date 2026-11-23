@@ -41,9 +41,9 @@ commands:
   screen-removed: "<green>Plátno <screen> bylo odstraněno.</green>"
   all-started: "<green>Zapnuto pláten: <count>.</green>"
   all-stopped: "<green>Vypnuto pláten: <count>.</green>"
-  set-usage: "<red>Použití: /mtv set <název> <url|fps|distance|enabled|permission> <hodnota></red>"
+  set-usage: "<red>Použití: /mtv set <název> <url|fps|distance|enabled|permission|audio|audio-distance> <hodnota></red>"
   set-success: "<green>Vlastnost <property> plátna <screen> byla upravena.</green>"
-  set-invalid: "<red>Neplatná hodnota pro <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission: true/false.</red>"
+  set-invalid: "<red>Neplatná hodnota pro <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission/audio: true/false, audio-distance: 4-512.</red>"
   source-usage: "<red>Použití: /mtv source <název> <rtmp|mjpeg|video|image|url-image|gif> <hodnota></red>"
   source-current: "<gray>Plátno <screen> používá <white><type></white>: <value></gray>"
   source-types: "<gray>Dostupné typy zdrojů: <types></gray>"
@@ -66,7 +66,7 @@ commands:
   event-stopped: "<green>Event na plátně <screen> byl zastaven.</green>"
   event-stop-failed: "<red>Event na plátně <screen> se nepodařilo zastavit.</red>"
   help-clone: "<white>/mtv clone <zdroj> <nový-název></white><gray> - vytvoří další plátno se sdíleným zdrojem</gray>"
-  help-set: "<white>/mtv set <název> <url|fps|distance|enabled|permission> <hodnota></white>"
+  help-set: "<white>/mtv set <název> <url|fps|distance|enabled|permission|audio|audio-distance> <hodnota></white>"
   no-display: "<red>Nejdříve vytvoř plátno: /mtv create main 7 4</red>"
   stream-connecting: "<green>Připojuji se ke zdroji médií...</green>"
   stream-already-running: "<red>Zdroj už běží.</red>"
@@ -98,6 +98,7 @@ status:
   missing: "<red>Plátno <screen> neexistuje.</red>"
   summary: "<gray>Plátna: <screens>, zapnutá: <enabled>, sdílené zdroje: <sources>, celkem map: <maps>. Použij /mtv list nebo /mtv status <název>.</gray>"
   no-display: "<gray>Žádné plátno nebylo vytvořeno.</gray>"
+  audio: "<gray>Zvuk plátna <screen>: <enabled>, dosah: <distance> bloků, zdroj zvuku: <emitter>. Plasmo Voice: <backend></gray>"
   line: "<gray>Plátno <name> <width>x<height>, zapnuto: <enabled>, chráněné: <permission_required> (<view_permission>), zdroj: <source_type> <source_value>, playlist: <playlist>, přehrávání: <playback>, stav: <stream>, sdílí pláten: <shared>, chyba zdroje: <stream_error>, efektivní FPS: <fps>, vzdálenost: <distance>, diváci: <viewers>, přijaté/vykreslené: <received>/<rendered>, chyba vykreslení: <render_error>, svět: <world>, směr: <facing></gray>"
 
 playback:

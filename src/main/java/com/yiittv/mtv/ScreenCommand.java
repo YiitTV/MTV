@@ -24,7 +24,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             "status", "source", "playlist", "event", "set", "reload", "debug",
             "mediamtx", "menu", "studio", "web", "vote");
     private static final List<String> SET_PROPERTIES =
-            List.of("url", "fps", "distance", "enabled", "permission");
+            List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance");
     private final MtvPlugin plugin;
 
     ScreenCommand(MtvPlugin plugin) {
@@ -231,6 +231,16 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         }
         sender.sendMessage(plugin.messages().component("prefix")
                 .append(plugin.status(args[1])));
+        String id = ScreenDefinition.normalizeId(args[1]);
+        if (plugin.hasScreen(id)) {
+            ScreenAudioManager.ScreenAudioSettings audio = plugin.screenAudio(id);
+            message(sender, "status.audio",
+                    "screen", id,
+                    "enabled", audio.enabled(),
+                    "distance", audio.distance(),
+                    "emitter", plugin.audio().channelOpen(id) ? "on" : "off",
+                    "backend", plugin.audio().status());
+        }
     }
 
     private void source(CommandSender sender, String[] args) {
@@ -398,6 +408,14 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                 Boolean value = parseBoolean(args[3]);
                 changed = value != null
                         && plugin.setScreenPermissionRequired(id, value);
+            }
+            case "audio", "sound" -> {
+                Boolean value = parseBoolean(args[3]);
+                changed = value != null && plugin.setScreenAudio(id, value);
+            }
+            case "audio-distance", "sound-distance" -> {
+                Double value = parseDouble(args[3]);
+                changed = value != null && plugin.setScreenAudioDistance(id, value);
             }
             default -> {
                 message(sender, "commands.set-usage");
@@ -710,7 +728,8 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 4 && subcommand.equals("set")
                 && (args[2].equalsIgnoreCase("enabled")
-                || args[2].equalsIgnoreCase("permission"))) {
+                || args[2].equalsIgnoreCase("permission")
+                || args[2].equalsIgnoreCase("audio"))) {
             return matching(List.of("true", "false"), args[3]);
         }
         return List.of();

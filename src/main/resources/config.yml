@@ -104,6 +104,19 @@ events:
         text: "Waiting for operator"
         duration: 1s
 
+audio:
+  # Positional screen audio through Plasmo Voice (players need the Plasmo Voice mod).
+  # Audio is decoded only for screens that have audio enabled. Without the PlasmoVoice
+  # plugin MTV keeps working as a silent billboard.
+  enabled: true
+  # Default for screens that have no audio.enabled value of their own.
+  # Turn audio on per screen with /mtv set <screen> audio true
+  default-enabled: false
+  # How far (in blocks) players hear a screen. Per screen: /mtv set <screen> audio-distance <4-512>
+  default-distance: 32
+  # Volume multiplier applied before encoding (0.0 - 2.0).
+  volume: 1.0
+
 screen:
   # Defaults used by newly created screens and by the legacy config migration.
   auto-start: true
@@ -136,6 +149,9 @@ screen:
 #     facing: NORTH
 #     enabled: true
 #     permission-required: false
+#     audio:
+#       enabled: true
+#       distance: 48
 screens: {}
 
 migration:
