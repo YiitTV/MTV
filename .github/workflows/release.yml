@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Also runs when a release is published from the GitHub web UI.
+  release:
+    types: [published]
 
 permissions:
   contents: write
