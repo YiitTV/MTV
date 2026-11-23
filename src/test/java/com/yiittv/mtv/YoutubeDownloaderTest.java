@@ -53,4 +53,12 @@ class YoutubeDownloaderTest {
         assertTrue(command.contains("--merge-output-format"));
         assertEquals("youtube/dQw4w9WgXcQ.mp4", YoutubeDownloader.mediaPath("dQw4w9WgXcQ"));
     }
+
+    @Test
+    void replacesTheOldSingleFormatDefault() {
+        assertEquals(YoutubeDownloader.DEFAULT_FORMAT, YoutubeDownloader.format(
+                "18/best[ext=mp4][vcodec!=none][acodec!=none]"));
+        assertEquals(YoutubeDownloader.DEFAULT_FORMAT, YoutubeDownloader.format(""));
+        assertEquals("22", YoutubeDownloader.format(" 22 "));
+    }
 }

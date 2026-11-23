@@ -105,6 +105,21 @@ final class YoutubeDownloader {
         return FOLDER + "/" + videoId + ".mp4";
     }
 
+    /**
+     * Prefers a single MP4 with audio (format 18), then falls back to separate video and
+     * audio streams up to 720p, which yt-dlp merges with the system ffmpeg.
+     */
+    static final String DEFAULT_FORMAT = "18/b[ext=mp4][height<=720]/bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/b";
+    private static final String LEGACY_DEFAULT_FORMAT = "18/best[ext=mp4][vcodec!=none][acodec!=none]";
+
+    static String format(String configured) {
+        if (configured == null || configured.isBlank()
+                || configured.trim().equals(LEGACY_DEFAULT_FORMAT)) {
+            return DEFAULT_FORMAT;
+        }
+        return configured.trim();
+    }
+
     /** Marker in file names of unfinished downloads; the Media Library skips them. */
     static final String DOWNLOAD_MARKER = ".download.";
 
@@ -164,8 +179,7 @@ final class YoutubeDownloader {
 
     private Result download(String videoId, Path target) {
         String executable = plugin.getConfig().getString("youtube.yt-dlp-path", "yt-dlp");
-        String format = plugin.getConfig().getString("youtube.format",
-                "18/best[ext=mp4][vcodec!=none][acodec!=none]");
+        String format = format(plugin.getConfig().getString("youtube.format", DEFAULT_FORMAT));
         String maxSize = plugin.getConfig().getString("youtube.max-filesize", "500M");
         long timeout = Math.max(30, plugin.getConfig().getLong("youtube.timeout-seconds", 600));
         Path directory = target.getParent();

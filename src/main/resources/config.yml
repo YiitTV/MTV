@@ -109,8 +109,10 @@ youtube:
   # media/youtube/<id>.mp4 and loops it like a local video. Install yt-dlp on the server
   # (https://github.com/yt-dlp/yt-dlp) or set its full path here.
   yt-dlp-path: "yt-dlp"
-  # Format 18 is a single 360p MP4 with audio, enough for map screens and needs no FFmpeg merge.
-  format: "18/best[ext=mp4][vcodec!=none][acodec!=none]"
+  # Tries format 18 (one 360p MP4 with audio) first. If YouTube does not offer it, separate
+  # video + audio up to 720p are downloaded and merged, which needs ffmpeg installed on the
+  # server (apt install ffmpeg). Recent yt-dlp versions also need Deno for YouTube.
+  format: "18/b[ext=mp4][height<=720]/bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/b"
   max-filesize: "500M"
   timeout-seconds: 600
 
