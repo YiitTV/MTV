@@ -60,6 +60,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
     private StudioWebServer webStudio;
     private LocalizationManager messages;
     private BukkitTask viewerTask;
+    private BukkitTask lookTask;
     private BukkitTask streamRestartTask;
     private ScheduledExecutorService renderExecutor;
     private volatile Path configuredMediaDirectory;
@@ -101,6 +102,8 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         youtube.start();
         startRenderExecutor();
         viewerTask = Bukkit.getScheduler().runTaskTimer(this, this::refreshViewers, 20L, 20L);
+        // Cheap look-direction check, so players who turn towards a screen get pixels quickly.
+        lookTask = Bukkit.getScheduler().runTaskTimer(this, this::refreshPacketReceivers, 25L, 5L);
         playbackController.reload();
         playbackController.activate();
         startEnabledSources();
@@ -116,6 +119,9 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         if (viewerTask != null) {
             viewerTask.cancel();
+        }
+        if (lookTask != null) {
+            lookTask.cancel();
         }
         cancelPendingStreamRestart();
         if (debugBossBars != null) {
@@ -1215,6 +1221,20 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
             screen.refreshViewers(onlinePlayers);
         }
         audio.sync(screens.values());
+    }
+
+    private void refreshPacketReceivers() {
+        if (screens.values().stream().noneMatch(ManagedScreen::hasViewers)) {
+            return;
+        }
+        List<ViewerPosition> onlinePlayers = Bukkit.getOnlinePlayers().stream()
+                .map(ViewerPosition::capture)
+                .toList();
+        for (ManagedScreen screen : screens.values()) {
+            if (screen.hasViewers()) {
+                screen.refreshPacketReceivers(onlinePlayers);
+            }
+        }
     }
 
     private void startEnabledSources() {

@@ -15,10 +15,12 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,6 +41,12 @@ final class ManagedScreen {
 
     private volatile ScreenDefinition definition;
     private volatile List<Player> receiverSnapshot = List.of();
+    /** Nearby viewers that can see the picture right now; only they get map packets. */
+    private volatile List<Player> packetReceivers = List.of();
+    /** Receivers whose client already shows the last flushed buffer. Render thread only. */
+    private final Set<UUID> syncedReceivers = ConcurrentHashMap.newKeySet();
+    private volatile boolean cullLookingAway;
+    private volatile double lookAwayAngle = 105;
     private volatile String lastRenderError = "none";
     private volatile long nextRenderNanos;
     private volatile double effectiveFps;
@@ -131,6 +139,7 @@ final class ManagedScreen {
         }
         spawnedViewers.clear();
         receiverSnapshot = List.of();
+        packetReceivers = List.of();
     }
 
     int width() {
@@ -240,7 +249,6 @@ final class ManagedScreen {
         double centerZ = (currentDisplay.box().getMinZ() + currentDisplay.box().getMaxZ()) / 2.0;
         Set<UUID> shouldSee = new HashSet<>();
         List<Player> receivers = new ArrayList<>();
-        boolean addedViewer = false;
 
         ScreenDefinition currentDefinition = definition;
         double audioDistanceSquared = (double) audioDistance * audioDistance;
@@ -268,7 +276,8 @@ final class ManagedScreen {
             shouldSee.add(player.getUniqueId());
             receivers.add(player);
             if (spawnedViewers.add(player.getUniqueId())) {
-                addedViewer = true;
+                // Freshly spawned frames are empty: make sure this player gets a full frame.
+                syncedReceivers.remove(player.getUniqueId());
                 currentDisplay.spawn(player);
             }
         }
@@ -284,13 +293,61 @@ final class ManagedScreen {
         }
         receiverSnapshot = List.copyOf(receivers);
         audioListeners = listeners;
-        if (addedViewer) {
-            forceFullFrame.set(true);
+        // New viewers are caught up with a full frame of their own in flushPendingFrame,
+        // instead of resending every map to everybody else.
+        refreshPacketReceivers(onlinePlayers);
+    }
+
+    /**
+     * Recomputes which nearby viewers get pixel updates: players behind the wall and, when
+     * enabled, players facing away keep their item frames but receive no map packets. Called
+     * several times per second because it only does a little vector maths per viewer.
+     */
+    void refreshPacketReceivers(List<ViewerPosition> onlinePlayers) {
+        List<Player> nearby = receiverSnapshot;
+        IMapDisplay currentDisplay = display;
+        if (destroyed.get() || currentDisplay == null || nearby.isEmpty()) {
+            packetReceivers = List.of();
+            return;
         }
+        Set<UUID> nearbyIds = new HashSet<>();
+        for (Player player : nearby) {
+            nearbyIds.add(player.getUniqueId());
+        }
+        ScreenDefinition currentDefinition = definition;
+        var box = currentDisplay.box();
+        boolean cull = cullLookingAway;
+        double angle = lookAwayAngle;
+        List<Player> visible = new ArrayList<>(nearby.size());
+        for (ViewerPosition viewer : onlinePlayers) {
+            if (!nearbyIds.contains(viewer.player().getUniqueId())) {
+                continue;
+            }
+            if (!ViewerCulling.inFront(currentDefinition.location(), currentDefinition.facing(),
+                    viewer.x(), viewer.z())) {
+                continue;
+            }
+            if (cull && !ViewerCulling.looksTowards(
+                    viewer.x(), viewer.eyeY(), viewer.z(),
+                    viewer.lookX(), viewer.lookY(), viewer.lookZ(),
+                    box.getMinX(), box.getMinY(), box.getMinZ(),
+                    box.getMaxX(), box.getMaxY(), box.getMaxZ(), angle)) {
+                continue;
+            }
+            visible.add(viewer.player());
+        }
+        packetReceivers = List.copyOf(visible);
     }
 
     void removeViewer(UUID playerId) {
         spawnedViewers.remove(playerId);
+        syncedReceivers.remove(playerId);
+        List<Player> visible = packetReceivers;
+        if (visible.stream().anyMatch(player -> player.getUniqueId().equals(playerId))) {
+            packetReceivers = visible.stream()
+                    .filter(player -> !player.getUniqueId().equals(playerId))
+                    .toList();
+        }
         List<Player> current = receiverSnapshot;
         if (current.stream().anyMatch(player -> player.getUniqueId().equals(playerId))) {
             receiverSnapshot = current.stream()
@@ -356,14 +413,31 @@ final class ManagedScreen {
             }
             return;
         }
+        List<Player> receivers = packetReceivers;
+        if (receivers.isEmpty()) {
+            // Nobody can see the picture: skip scaling, colour conversion and packets. The
+            // newest frame stays queued and every later viewer starts with a full frame.
+            syncedReceivers.clear();
+            return;
+        }
+        List<Player> newcomers = new ArrayList<>();
+        Set<UUID> receiverIds = new HashSet<>();
+        for (Player player : receivers) {
+            receiverIds.add(player.getUniqueId());
+            if (!syncedReceivers.contains(player.getUniqueId())) {
+                newcomers.add(player);
+            }
+        }
+        syncedReceivers.retainAll(receiverIds);
+
         boolean fullFrame = forceFullFrame.get();
-        if (!fullFrame && now < nextRenderNanos) {
+        if (!fullFrame && newcomers.isEmpty() && now < nextRenderNanos) {
             return;
         }
 
         SharedVideoFrame shared = pendingFrame.getAndSet(null);
         fullFrame = forceFullFrame.getAndSet(false);
-        if (shared == null && !fullFrame) {
+        if (shared == null && !fullFrame && newcomers.isEmpty()) {
             return;
         }
         IMapDisplay currentDisplay = display;
@@ -373,9 +447,11 @@ final class ManagedScreen {
             }
             return;
         }
-        long interval = Math.max(50_000_000L,
-                Math.round(1_000_000_000.0 / effectiveFps()));
-        nextRenderNanos = now + interval;
+        if (shared != null || fullFrame) {
+            long interval = Math.max(50_000_000L,
+                    Math.round(1_000_000_000.0 / effectiveFps()));
+            nextRenderNanos = now + interval;
+        }
 
         long renderStarted = System.nanoTime();
         boolean renderCompleted = false;
@@ -385,32 +461,38 @@ final class ManagedScreen {
                 if (currentDrawing == null) {
                     return;
                 }
-                currentDrawing.ctx().receivers(receiverSnapshot);
                 if (shared != null) {
-                    FullSpacedColorBuffer target = currentDrawing.buffer();
-                    RenderSurface surface = renderSurface;
-                    if (surface == null || !surface.wraps(target)) {
-                        surface = new RenderSurface(target);
-                        renderSurface = surface;
-                    }
-                    scaleIntoImage(shared.image(), surface.image());
+                    drawFrame(shared, currentDrawing.buffer());
                 }
 
                 boolean useDelta = (long) currentDisplay.width()
                         * currentDisplay.height() <= maxDeltaMaps;
-                currentDrawing.ctx().previousBuffer(fullFrame || !useDelta ? null : previousFrame);
-                currentDrawing.flush();
+                if (fullFrame || previousFrame == null) {
+                    flush(currentDrawing, receivers, null);
+                } else {
+                    if (!newcomers.isEmpty()) {
+                        // Only the new viewers get every map; the others keep receiving deltas.
+                        flush(currentDrawing, newcomers, null);
+                    }
+                    if (shared != null && newcomers.size() < receivers.size()) {
+                        List<Player> steady = new ArrayList<>(receivers);
+                        steady.removeAll(newcomers);
+                        flush(currentDrawing, steady, useDelta ? previousFrame : null);
+                    }
+                }
                 if (useDelta) {
                     capturePreviousFrame(currentDrawing.buffer());
                 } else {
                     previousFrame = null;
                 }
+                syncedReceivers.addAll(receiverIds);
                 renderedFrames.incrementAndGet();
                 lastRenderError = "none";
                 renderCompleted = true;
             }
         } catch (Throwable throwable) {
             lastRenderError = throwable.getClass().getSimpleName();
+            forceFullFrame.set(true);
             plugin.getLogger().severe(plugin.messages().plain(
                     "logs.render-failed-screen",
                     "screen", id(),
@@ -427,6 +509,56 @@ final class ManagedScreen {
         }
     }
 
+    private static void flush(IDrawingSpace drawing, List<Player> receivers,
+                              FullSpacedColorBuffer previous) {
+        drawing.ctx().receivers(receivers);
+        drawing.ctx().previousBuffer(previous);
+        drawing.flush();
+    }
+
+    /** Writes a frame into the MapEngine buffer, letterboxed and centred. */
+    private void drawFrame(SharedVideoFrame frame, FullSpacedColorBuffer target) {
+        BufferedImage image = frame.image();
+        int[] pixels = frame.opaquePixels();
+        if (pixels != null && copyLetterboxed(pixels, image.getWidth(), image.getHeight(),
+                target.buffer(), target.width(), target.height())) {
+            return;
+        }
+        RenderSurface surface = renderSurface;
+        if (surface == null || !surface.wraps(target)) {
+            surface = new RenderSurface(target);
+            renderSurface = surface;
+        }
+        scaleIntoImage(image, surface.image());
+    }
+
+    /**
+     * Fast path for decoded video that the decoder already fitted to this screen size: plain
+     * row copies instead of a Java2D scale. Returns false when the frame needs real scaling.
+     */
+    static boolean copyLetterboxed(int[] source, int width, int height,
+                                   int[] target, int targetWidth, int targetHeight) {
+        boolean fits = (width == targetWidth && height <= targetHeight)
+                || (height == targetHeight && width <= targetWidth);
+        if (!fits || source.length < width * height || target.length < targetWidth * targetHeight) {
+            return false;
+        }
+        int offsetX = (targetWidth - width) / 2;
+        int offsetY = (targetHeight - height) / 2;
+        if (width != targetWidth || height != targetHeight) {
+            Arrays.fill(target, 0, targetWidth * targetHeight, 0xFF000000);
+        }
+        if (width == targetWidth) {
+            System.arraycopy(source, 0, target, offsetY * targetWidth, width * height);
+            return true;
+        }
+        for (int y = 0; y < height; y++) {
+            System.arraycopy(source, y * width, target,
+                    (y + offsetY) * targetWidth + offsetX, width);
+        }
+        return true;
+    }
+
     void destroy() {
         if (!destroyed.compareAndSet(false, true)) {
             return;
@@ -439,6 +571,8 @@ final class ManagedScreen {
             previousFrame = null;
             renderSurface = null;
         }
+        syncedReceivers.clear();
+        packetReceivers = List.of();
         SharedVideoFrame queued = pendingFrame.getAndSet(null);
         if (queued != null) {
             queued.release();
@@ -509,6 +643,10 @@ final class ManagedScreen {
                 plugin.getConfig().getDouble("performance.minimum-fps", 0.2));
         maxDeltaMaps = Math.max(0,
                 plugin.getConfig().getInt("performance.delta-updates-max-maps", 256));
+        cullLookingAway = plugin.getConfig().getBoolean(
+                "performance.skip-viewers-looking-away", true);
+        lookAwayAngle = Math.max(60, Math.min(180, plugin.getConfig().getDouble(
+                "performance.look-away-angle", 105)));
     }
 
     private void capturePreviousFrame(FullSpacedColorBuffer current) {

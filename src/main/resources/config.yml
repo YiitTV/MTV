@@ -190,6 +190,17 @@ performance:
   delta-updates-max-maps: 256
   # Must be longer than stream.io-timeout-seconds for safe decoder shutdown.
   worker-stop-timeout-seconds: 8
+  # FFmpeg decoder threads per source. 0 lets FFmpeg use every core for each decoder, which
+  # wastes CPU on thread switching once several screens play at once. 2 is plenty for 1080p.
+  decoder-threads: 2
+  # Skips non-reference video frames while decoding. Other frames never depend on them, so
+  # there are no artefacts; screens show at most 20 of the source's 25-60 frames per second.
+  skip-non-reference-frames: true
+  # Players behind a screen never receive map packets. With this enabled, players facing away
+  # (more than look-away-angle degrees from every part of the screen) also stop receiving
+  # pixel updates until they turn around; they then get one full frame of their own.
+  skip-viewers-looking-away: true
+  look-away-angle: 105
 
 logging:
   # FFmpeg uses a process-wide log level shared with other JavaCV plugins.

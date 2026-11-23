@@ -195,7 +195,9 @@ final class SharedMediaSource {
                     plugin.getConfig().getInt("stream.reconnect-max-delay-seconds", 30),
                     plugin.getConfig().getLong("stream.io-timeout-seconds", 5),
                     plugin.getConfig().getLong(
-                            "performance.worker-stop-timeout-seconds", 8)
+                            "performance.worker-stop-timeout-seconds", 8),
+                    plugin.getConfig().getInt("performance.decoder-threads", 2),
+                    plugin.getConfig().getBoolean("performance.skip-non-reference-frames", true)
             );
         }
         return new ImageSourceWorker(plugin, this, source);
@@ -269,9 +271,13 @@ final class SharedMediaSource {
     }
 
     void publish(BufferedImage image) {
-        captureWebPreview(image);
-        SharedVideoFrame frame = new SharedVideoFrame(image);
+        publish(new SharedVideoFrame(image));
+    }
+
+    /** Hands a frame to every enabled screen; takes over the caller's reference. */
+    void publish(SharedVideoFrame frame) {
         try {
+            captureWebPreview(frame.image());
             for (ManagedScreen screen : screens) {
                 if (screen.enabled()) {
                     screen.offerFrame(frame);

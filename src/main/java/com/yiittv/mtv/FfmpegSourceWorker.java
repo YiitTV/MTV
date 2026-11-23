@@ -1,14 +1,15 @@
 package com.yiittv.mtv;
 
-import org.bytedeco.javacv.FFmpegFrameFilter;
+import org.bytedeco.ffmpeg.global.avutil;
+import org.bytedeco.ffmpeg.global.swscale;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
-import org.bytedeco.javacv.Java2DFrameConverter;
 
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +28,8 @@ final class FfmpegSourceWorker implements SourceWorker {
     private final int reconnectMaxDelaySeconds;
     private final long ioTimeoutSeconds;
     private final long stopTimeoutSeconds;
+    private final int decoderThreads;
+    private final boolean skipNonReferenceFrames;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean terminated = new AtomicBoolean(true);
     private final AtomicReference<String> state = new AtomicReference<>("stopped");
@@ -43,7 +46,8 @@ final class FfmpegSourceWorker implements SourceWorker {
     FfmpegSourceWorker(MtvPlugin plugin, SharedMediaSource sharedSource,
                        ScreenSource source, int reconnectDelaySeconds,
                        int reconnectMaxDelaySeconds, long ioTimeoutSeconds,
-                       long stopTimeoutSeconds) {
+                       long stopTimeoutSeconds, int decoderThreads,
+                       boolean skipNonReferenceFrames) {
         this.plugin = plugin;
         this.sharedSource = sharedSource;
         this.source = source;
@@ -52,6 +56,8 @@ final class FfmpegSourceWorker implements SourceWorker {
                 Math.max(this.reconnectDelaySeconds, reconnectMaxDelaySeconds);
         this.ioTimeoutSeconds = Math.max(1, ioTimeoutSeconds);
         this.stopTimeoutSeconds = Math.max(1, stopTimeoutSeconds);
+        this.decoderThreads = Math.max(0, Math.min(16, decoderThreads));
+        this.skipNonReferenceFrames = skipNonReferenceFrames;
     }
 
     @Override
@@ -221,34 +227,39 @@ final class FfmpegSourceWorker implements SourceWorker {
         LiveStreamResolver.LiveStream live = source.type() == SourceType.LIVE
                 ? resolveLive() : null;
         String input = live != null ? live.video() : plugin.resolveSourceInput(source);
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input);
-             Java2DFrameConverter converter = new Java2DFrameConverter()) {
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input)) {
             boolean audio = sharedSource.wantsAudio();
             // YouTube lives deliver audio as its own playlist: decode it on a second grabber.
             boolean separateAudio = audio && live != null && live.separateAudio();
             boolean inlineAudio = audio && !separateAudio;
             configure(grabber, inlineAudio, plugin.audio().sampleRate());
+            configureVideo(grabber);
             grabber.start();
             if (separateAudio) {
                 sideAudioThread = startSideAudio(live.audio(), plugin.audio().sampleRate());
             }
-            FFmpegFrameFilter scaler = createScaler(grabber);
-            try {
 
-            if (grabber.getImageWidth() <= 0 || grabber.getImageHeight() <= 0) {
+            // Read the real stream size before setImageWidth/Height change what the grabber reports.
+            int nativeWidth = grabber.getImageWidth();
+            int nativeHeight = grabber.getImageHeight();
+            if (nativeWidth <= 0 || nativeHeight <= 0) {
                 throw new IllegalStateException("video dimensions are missing");
             }
-            sourceWidth.set(grabber.getImageWidth());
-            sourceHeight.set(grabber.getImageHeight());
+            sourceWidth.set(nativeWidth);
+            sourceHeight.set(nativeHeight);
+            applyOutputSize(grabber, nativeWidth, nativeHeight);
             state.set("live");
             lastError.set("none");
             plugin.getLogger().info(plugin.messages().plain(
                     "logs.source-connected",
                     "type", source.type().id(),
                     "value", source.displayValue(),
-                    "width", grabber.getImageWidth(),
-                    "height", grabber.getImageHeight()));
+                    "width", nativeWidth,
+                    "height", nativeHeight));
 
+            double frameRate = grabber.getFrameRate();
+            long frameNanos = (long) (TimeUnit.SECONDS.toNanos(1)
+                    / (frameRate > 1 && Double.isFinite(frameRate) ? Math.min(frameRate, 120) : 30));
             long nextPublish = System.nanoTime();
             long playbackStarted = 0;
             long firstTimestamp = -1;
@@ -267,9 +278,17 @@ final class FfmpegSourceWorker implements SourceWorker {
                         // Audio was switched on or off for a screen: reopen with the new setup.
                         return ReceiveResult.RECONFIGURE;
                     }
+                    // Screens may have been resized, enabled or disabled.
+                    applyOutputSize(grabber, nativeWidth, nativeHeight);
                 }
 
-                Frame frame = inlineAudio ? grabber.grab() : grabber.grabImage();
+                // Every frame has to be decoded, but only the ones that will be shown need the
+                // colour conversion. With inline audio the grabber processes both together.
+                boolean wantPicture = inlineAudio
+                        || System.nanoTime() + frameNanos >= nextPublish;
+                Frame frame = inlineAudio
+                        ? grabber.grab()
+                        : grabber.grabFrame(false, true, wantPicture, false, false);
                 if (frame == null) {
                     if (source.type().loopsAtEnd() && !loopSeekPending) {
                         grabber.setTimestamp(0);
@@ -284,9 +303,11 @@ final class FfmpegSourceWorker implements SourceWorker {
                     throw new IllegalStateException("source ended");
                 }
                 boolean hasAudio = inlineAudio && frame.samples != null && frame.samples.length > 0;
-                boolean hasImage = frame.image != null
+                boolean isVideo = frame.type == Frame.Type.VIDEO;
+                // Unprocessed video frames keep imageWidth 0 and a stale buffer: never show them.
+                boolean hasImage = isVideo && frame.image != null
                         && frame.imageWidth > 0 && frame.imageHeight > 0;
-                if (!hasAudio && !hasImage) {
+                if (!hasAudio && !isVideo) {
                     continue;
                 }
                 loopSeekPending = false;
@@ -316,38 +337,27 @@ final class FfmpegSourceWorker implements SourceWorker {
 
                 if (hasAudio) {
                     publishAudio(frame.samples[0]);
-                    if (!hasImage) {
+                    if (!isVideo) {
                         continue;
                     }
                 }
 
                 lastFrameAt.set(System.currentTimeMillis());
+                if (!hasImage) {
+                    continue;
+                }
                 long now = System.nanoTime();
                 long interval = (long) (TimeUnit.SECONDS.toNanos(1)
                         / Math.max(0.1, Math.min(20, sharedSource.targetFps())));
-                if (now < nextPublish) {
+                // Half a source frame of tolerance keeps the requested rate instead of
+                // rounding down to every other frame.
+                if (now + frameNanos / 2 < nextPublish) {
                     continue;
                 }
-                nextPublish = now + interval;
-                Frame picture = frame;
-                if (scaler != null) {
-                    scaler.push(frame);
-                    picture = scaler.pull();
-                    if (picture == null || picture.image == null) {
-                        continue;
-                    }
-                }
-                BufferedImage image = converter.convert(picture);
-                if (image != null) {
-                    sharedSource.publish(copyFrame(image));
-                }
-            }
-            } finally {
-                if (scaler != null) {
-                    try {
-                        scaler.close();
-                    } catch (Exception ignored) {
-                    }
+                nextPublish = Math.max(nextPublish + interval, now + interval / 2);
+                SharedVideoFrame picture = toScreenFrame(frame);
+                if (picture != null) {
+                    sharedSource.publish(picture);
                 }
             }
         }
@@ -502,53 +512,74 @@ final class FfmpegSourceWorker implements SourceWorker {
         return false;
     }
 
-    private static BufferedImage copyFrame(BufferedImage source) {
-        BufferedImage output = new BufferedImage(
-                source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics = output.createGraphics();
-        try {
-            graphics.drawImage(source, 0, 0, null);
-        } finally {
-            graphics.dispose();
+    /**
+     * Video options: decoder threads and skipping of non-reference frames. Non-reference
+     * frames are never used to predict other frames, so dropping them causes no artefacts;
+     * map screens show at most 20 of the source's 25-60 frames per second anyway.
+     */
+    private void configureVideo(FFmpegFrameGrabber grabber) {
+        if (decoderThreads > 0) {
+            grabber.setVideoOption("threads", Integer.toString(decoderThreads));
         }
-        return output;
+        if (skipNonReferenceFrames) {
+            grabber.setVideoOption("skip_frame", "noref");
+        }
+        // BGRA bytes are little-endian ARGB ints: frames go straight into MapEngine buffers.
+        grabber.setPixelFormat(avutil.AV_PIX_FMT_BGRA);
+        grabber.setImageScalingFlags(swscale.SWS_BILINEAR);
     }
 
     /**
-     * Downscales decoded video with FFmpeg's native scaler to the largest screen size, so
-     * Java never copies or resizes full-resolution frames. Returns null when not needed.
+     * Makes the grabber's single colour-conversion pass also downscale to the largest
+     * screen size, so Java never touches full-resolution frames. Never upscales.
      */
-    private FFmpegFrameFilter createScaler(FFmpegFrameGrabber grabber) {
-        int sourceWidth = grabber.getImageWidth();
-        int sourceHeight = grabber.getImageHeight();
-        int[] target = sharedSource.targetPixelSize();
-        if (target[0] < 1 || target[1] < 1
-                || (sourceWidth <= target[0] && sourceHeight <= target[1])) {
-            return null;
-        }
-        try {
-            return scaler(sourceWidth, sourceHeight, grabber.getPixelFormat(),
-                    grabber.getFrameRate(), target[0], target[1]);
-        } catch (Exception exception) {
-            return null;
+    private void applyOutputSize(FFmpegFrameGrabber grabber, int nativeWidth, int nativeHeight) {
+        int[] size = fitInside(nativeWidth, nativeHeight, sharedSource.targetPixelSize());
+        if (grabber.getImageWidth() != size[0] || grabber.getImageHeight() != size[1]) {
+            grabber.setImageWidth(size[0]);
+            grabber.setImageHeight(size[1]);
         }
     }
 
-    /** Native "fit inside" scaler; package-private for tests. */
-    static FFmpegFrameFilter scaler(int sourceWidth, int sourceHeight, int pixelFormat,
-                                    double frameRate, int targetWidth, int targetHeight)
-            throws Exception {
-        double scale = Math.min(targetWidth / (double) sourceWidth,
-                targetHeight / (double) sourceHeight);
+    /** Largest even size that keeps the aspect ratio and fits inside target; package-private for tests. */
+    static int[] fitInside(int sourceWidth, int sourceHeight, int[] target) {
+        if (target == null || target[0] < 1 || target[1] < 1
+                || (sourceWidth <= target[0] && sourceHeight <= target[1])) {
+            return new int[]{sourceWidth, sourceHeight};
+        }
+        double scale = Math.min(target[0] / (double) sourceWidth,
+                target[1] / (double) sourceHeight);
         int width = Math.max(2, (int) Math.round(sourceWidth * scale) & ~1);
         int height = Math.max(2, (int) Math.round(sourceHeight * scale) & ~1);
-        FFmpegFrameFilter filter = new FFmpegFrameFilter(
-                "scale=" + width + ":" + height + ":flags=fast_bilinear,format=bgr24",
-                sourceWidth, sourceHeight);
-        filter.setPixelFormat(pixelFormat);
-        filter.setFrameRate(frameRate > 0 && Double.isFinite(frameRate) ? frameRate : 30);
-        filter.start();
-        return filter;
+        return new int[]{Math.min(width, target[0]), Math.min(height, target[1])};
+    }
+
+    /** Copies a processed BGRA frame into a fresh opaque ARGB frame. */
+    static SharedVideoFrame toScreenFrame(Frame frame) {
+        if (frame.image == null || !(frame.image[0] instanceof ByteBuffer bytes)) {
+            return null;
+        }
+        int width = frame.imageWidth;
+        int height = frame.imageHeight;
+        int stride = frame.imageStride / 4;
+        if (width < 1 || height < 1 || stride < width) {
+            return null;
+        }
+        IntBuffer source = bytes.duplicate().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        if (source.capacity() < (height - 1) * stride + width) {
+            return null;
+        }
+        int[] pixels = new int[width * height];
+        if (stride == width) {
+            source.position(0);
+            source.get(pixels, 0, pixels.length);
+        } else {
+            for (int y = 0; y < height; y++) {
+                source.position(y * stride);
+                source.get(pixels, y * width, width);
+            }
+        }
+        return SharedVideoFrame.opaque(pixels, width, height);
     }
 
     private static String compactError(Exception exception) {
