@@ -43,6 +43,6 @@ class LiveStreamResolverTest {
         assertEquals(SourceType.LIVE, SourceType.parse("twitch"));
         List<String> command = LiveStreamResolver.command("yt-dlp", "best", "https://kick.com/abc");
         assertEquals("--", command.get(command.size() - 2));
-        assertTrue(command.contains("-g"));
+        assertTrue(command.contains("is_live"));
     }
 }

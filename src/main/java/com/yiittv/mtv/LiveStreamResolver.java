@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 final class LiveStreamResolver {
 
     static final String DEFAULT_FORMAT = "best[height<=480]/best";
+    static final String NOT_LIVE = "this YouTube video is not live; use /mtv source <billboard> youtube <link>";
 
     private LiveStreamResolver() {
     }
@@ -78,7 +79,11 @@ final class LiveStreamResolver {
         command.add("--no-warnings");
         command.add("-f");
         command.add(format);
-        command.add("-g");
+        // First line: whether the page is live; then the stream address(es).
+        command.add("--print");
+        command.add("is_live");
+        command.add("--print");
+        command.add("urls");
         command.add("--");
         command.add(page);
         return command;
@@ -106,16 +111,30 @@ final class LiveStreamResolver {
                 output = new String(input.readNBytes(65_536), StandardCharsets.UTF_8);
             }
             String error = null;
+            Boolean live = null;
             for (String line : output.split("\\R")) {
                 String trimmed = line.trim();
+                if (live == null && (trimmed.equals("True") || trimmed.equals("False")
+                        || trimmed.equals("NA"))) {
+                    live = trimmed.equals("True");
+                    continue;
+                }
                 if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
                     if (process.exitValue() == 0) {
+                        if (Boolean.FALSE.equals(live) && canonical.contains("youtube.com/watch")) {
+                            throw new IOException(NOT_LIVE);
+                        }
                         return trimmed;
                     }
                 }
                 if (trimmed.startsWith("ERROR")) {
                     error = trimmed;
                 }
+            }
+            if (error != null && canonical.contains("youtube.com/watch")
+                    && error.contains("Requested format is not available")) {
+                // Regular uploads have no combined audio+video stream to play live.
+                throw new IOException(NOT_LIVE);
             }
             if (error != null && error.toLowerCase(Locale.ROOT).contains("offline")) {
                 throw new IOException("the channel is offline");
