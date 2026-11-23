@@ -2,9 +2,10 @@ name: Build
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "claude/**"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -32,3 +33,11 @@ jobs:
           jar tf target/MTV-*.jar > target/jar-entries.txt
           grep -Fx 'META-INF/maven/org.bytedeco/ffmpeg/pom.properties' target/jar-entries.txt
           grep -Fx 'META-INF/maven/org.bytedeco/javacpp/pom.properties' target/jar-entries.txt
+
+      - name: Upload plugin JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: MTV-plugin-jar
+          path: target/MTV-*.jar
+          if-no-files-found: error
+          retention-days: 30
