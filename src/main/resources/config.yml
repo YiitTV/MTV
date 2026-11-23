@@ -116,6 +116,13 @@ youtube:
   max-filesize: "500M"
   timeout-seconds: 600
 
+live:
+  # /mtv live <billboard> <link> plays YouTube, Twitch and Kick live streams. yt-dlp (see
+  # youtube.yt-dlp-path) finds the HLS address again on every reconnect.
+  # 480p keeps CPU and bandwidth low; map screens rarely need more.
+  format: "best[height<=480]/best"
+  resolve-timeout-seconds: 30
+
 audio:
   # Positional screen audio through Plasmo Voice (players need the Plasmo Voice mod).
   # Audio is decoded only for screens that have audio enabled. Without the PlasmoVoice

@@ -9,7 +9,9 @@ public enum SourceType {
     VIDEO("video", List.of("local-video")),
     IMAGE("image", List.of("local-image")),
     URL_IMAGE("url-image", List.of("image-url", "remote-image")),
-    GIF("gif", List.of());
+    GIF("gif", List.of()),
+    /** YouTube, Twitch or Kick live page, resolved to HLS with yt-dlp on every connect. */
+    LIVE("live", List.of("stream", "twitch", "kick", "youtube-live"));
 
     private final String id;
     private final List<String> aliases;
@@ -24,11 +26,11 @@ public enum SourceType {
     }
 
     boolean isRemote() {
-        return this == RTMP || this == MJPEG || this == URL_IMAGE;
+        return this == RTMP || this == MJPEG || this == URL_IMAGE || this == LIVE;
     }
 
     boolean usesFfmpeg() {
-        return this == RTMP || this == MJPEG || this == VIDEO || this == GIF;
+        return this == RTMP || this == MJPEG || this == VIDEO || this == GIF || this == LIVE;
     }
 
     boolean loopsAtEnd() {

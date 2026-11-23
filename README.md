@@ -97,7 +97,10 @@ https://unknown-56-works.gitbook.io/luigiscreen/
 | `/mtv stop <name\|all>` | Disable streaming without deleting screens |
 | `/mtv remove <name>` | Remove one screen |
 | `/mtv status [name]` | Show the registry summary or detailed screen state |
-| `/mtv source <name> <type> <value>` | Switch RTMP, MJPEG, video, image, URL image or GIF |
+| `/mtv source <name> <type> <value>` | Switch RTMP, MJPEG, video, image, URL image, GIF or live |
+| `/mtv live <name[,name2]> <link>` | Play a YouTube, Twitch or Kick live stream |
+| `/mtv loop <name[,name2]> <sequence\|shuffle\|stop> <links/files...>` | Loop several videos |
+| `/mtv skip <name[,name2]>` | Skip to the next item |
 | `/mtv playlist list|set|clear ...` | Assign or clear a configured media playlist |
 | `/mtv event list|play|stop ...` | Play or stop a configured manual event scene |
 | `/mtv set <name> <url\|fps\|distance\|enabled\|permission\|audio\|audio-distance> <value>` | Change an independent screen setting |
@@ -145,6 +148,22 @@ point one or more billboards at a YouTube link:
 - yt-dlp must be installed on the server (`youtube.yt-dlp-path` in `config.yml`).
 - `refresh` downloads the video again, for example after you re-upload it.
 - Only show videos you own or have the right to show; YouTube's terms apply.
+
+## Live streams (YouTube, Twitch, Kick)
+
+```text
+/mtv live spawn_billboard https://www.twitch.tv/channel
+/mtv live spawn_billboard,market_billboard https://kick.com/channel
+/mtv live spawn_billboard https://www.youtube.com/@channel/live
+/mtv skip spawn_billboard
+```
+
+- yt-dlp resolves the stream's HLS address on every (re)connect; MTV plays it
+  live with its bundled FFmpeg. Nothing is downloaded.
+- Quality is capped at 480p by default (`live.format` in `config.yml`).
+- Expect 5-20 seconds of delay. Offline channels are retried automatically.
+- Only show streams you own or have permission to rebroadcast.
+- `/mtv skip` jumps to the next item of a loop or playlist.
 
 ## Looping several videos
 
@@ -207,7 +226,7 @@ The shaded plugin JAR is created in `target/`.
 
 ## Verification
 
-The current suite contains 78 automated tests covering:
+The current suite contains 81 automated tests covering:
 
 - RTMP URL and error-message sanitization
 - Screen corner calculation for every vertical direction
@@ -231,6 +250,7 @@ The current suite contains 78 automated tests covering:
 - Audio framing, volume and audio distance limits
 - YouTube link parsing and yt-dlp command construction
 - Loop playlist order parsing and generated playlist names
+- Live link validation for YouTube, Twitch and Kick
 
 ## Platform limits
 

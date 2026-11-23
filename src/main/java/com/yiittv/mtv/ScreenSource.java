@@ -29,6 +29,7 @@ public record ScreenSource(SourceType type, String value) {
             case MJPEG, URL_IMAGE -> hasScheme("http", "https");
             case VIDEO, IMAGE -> !looksLikeUrl();
             case GIF -> !looksLikeUrl() || hasScheme("http", "https");
+            case LIVE -> LiveStreamResolver.supported(value);
         };
     }
 

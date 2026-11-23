@@ -1252,7 +1252,7 @@ final class StudioMenuManager implements Listener {
             case VIDEO -> Material.FILLED_MAP;
             case IMAGE, URL_IMAGE -> Material.PAINTING;
             case GIF -> Material.FIREWORK_STAR;
-            case RTMP, MJPEG -> Material.ENDER_EYE;
+            case RTMP, MJPEG, LIVE -> Material.ENDER_EYE;
         };
     }
 
@@ -1263,7 +1263,7 @@ final class StudioMenuManager implements Listener {
             case VIDEO -> Material.FILLED_MAP;
             case IMAGE, URL_IMAGE -> Material.PAINTING;
             case GIF -> Material.FIREWORK_STAR;
-            case RTMP, MJPEG -> Material.ENDER_EYE;
+            case RTMP, MJPEG, LIVE -> Material.ENDER_EYE;
         };
     }
 

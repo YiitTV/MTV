@@ -21,7 +21,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
             "create", "clone", "list", "start", "stop", "remove",
-            "status", "source", "playlist", "loop", "event", "set", "reload", "debug",
+            "status", "source", "live", "playlist", "loop", "skip", "event", "set", "reload", "debug",
             "mediamtx", "menu", "studio", "web", "vote");
     private static final List<String> SET_PROPERTIES =
             List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance");
@@ -58,6 +58,8 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             case "source" -> source(sender, args);
             case "playlist" -> playlist(sender, args);
             case "loop" -> loop(sender, args);
+            case "skip" -> skip(sender, args);
+            case "live" -> live(sender, args);
             case "event" -> event(sender, args);
             case "set" -> set(sender, args);
             case "debug" -> debug(sender);
@@ -356,6 +358,55 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                 message(sender, "commands.source-failed", "screen", String.join(", ", failed));
             }
         });
+    }
+
+    /** /mtv skip <billboard[,billboard2]> */
+    private void skip(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            message(sender, "commands.skip-usage");
+            return;
+        }
+        List<String> targets = screenTargets(sender, args[1]);
+        if (targets == null) {
+            return;
+        }
+        for (String target : targets) {
+            if (plugin.skipPlayback(target)) {
+                message(sender, "commands.skip-success", "screen", target);
+            } else {
+                message(sender, "commands.skip-failed", "screen", target);
+            }
+        }
+    }
+
+    /** /mtv live <billboard[,billboard2]> <youtube|twitch|kick link> */
+    private void live(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            message(sender, "commands.live-usage");
+            return;
+        }
+        List<String> targets = screenTargets(sender, args[1]);
+        if (targets == null) {
+            return;
+        }
+        String page = LiveStreamResolver.canonicalPage(args[2]).orElse(null);
+        if (page == null) {
+            message(sender, "commands.live-invalid");
+            return;
+        }
+        ScreenSource source = new ScreenSource(SourceType.LIVE, page);
+        List<String> failed = new ArrayList<>();
+        for (String target : targets) {
+            if (!plugin.setScreenSource(target, source)) {
+                failed.add(target);
+            }
+        }
+        if (failed.isEmpty()) {
+            message(sender, "commands.live-started",
+                    "screens", String.join(", ", targets), "url", page);
+        } else {
+            message(sender, "commands.source-failed", "screen", String.join(", ", failed));
+        }
     }
 
     /**
@@ -808,6 +859,8 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         message(sender, "commands.help-source");
         message(sender, "commands.help-youtube");
         message(sender, "commands.help-loop");
+        message(sender, "commands.help-live");
+        message(sender, "commands.help-skip");
         message(sender, "commands.help-playback");
         message(sender, "commands.help-set");
         message(sender, "commands.help-debug");
@@ -915,6 +968,9 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             types.add("youtube");
             types.add("types");
             return matching(types, args[2]);
+        }
+        if (args.length == 2 && List.of("skip", "live").contains(subcommand)) {
+            return matching(plugin.screenIds(), args[1]);
         }
         if (args.length == 2 && subcommand.equals("loop")) {
             return matching(plugin.screenIds(), args[1]);

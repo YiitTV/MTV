@@ -215,7 +215,9 @@ final class FfmpegSourceWorker implements SourceWorker {
     private ReceiveResult receiveFrames() throws Exception {
         state.set("connecting");
         reconnects.incrementAndGet();
-        String input = plugin.resolveSourceInput(source);
+        String input = source.type() == SourceType.LIVE
+                ? resolveLive()
+                : plugin.resolveSourceInput(source);
         try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input);
              Java2DFrameConverter converter = new Java2DFrameConverter()) {
             boolean audio = sharedSource.wantsAudio();
@@ -278,13 +280,24 @@ final class FfmpegSourceWorker implements SourceWorker {
                 }
                 loopSeekPending = false;
 
-                if (source.type().loopsAtEnd() && frame.timestamp >= 0) {
+                // Files and HLS live streams are paced to real time; HLS delivers the first
+                // segments in a burst that would otherwise play (and buffer audio) too fast.
+                if ((source.type().loopsAtEnd() || source.type() == SourceType.LIVE)
+                        && frame.timestamp >= 0) {
                     if (firstTimestamp < 0) {
                         firstTimestamp = frame.timestamp;
                         playbackStarted = System.nanoTime();
                     }
                     long target = playbackStarted
                             + Math.max(0, frame.timestamp - firstTimestamp) * 1_000L;
+                    if (frame.timestamp < firstTimestamp
+                            || target - System.nanoTime() > TimeUnit.SECONDS.toNanos(2)) {
+                        // Timestamp discontinuity (stream ad break, segment reset): re-anchor
+                        // instead of freezing the picture while waiting for the new timeline.
+                        firstTimestamp = frame.timestamp;
+                        playbackStarted = System.nanoTime();
+                        target = playbackStarted;
+                    }
                     if (!sleepUntil(target)) {
                         return ReceiveResult.STOPPED;
                     }
@@ -312,6 +325,20 @@ final class FfmpegSourceWorker implements SourceWorker {
             }
         }
         return ReceiveResult.STOPPED;
+    }
+
+    private String resolveLive() throws Exception {
+        state.set("resolving live stream");
+        String executable = plugin.getConfig().getString("youtube.yt-dlp-path", "yt-dlp");
+        String format = plugin.getConfig().getString("live.format",
+                LiveStreamResolver.DEFAULT_FORMAT);
+        long timeout = Math.max(10, plugin.getConfig().getLong("live.resolve-timeout-seconds", 30));
+        String address = LiveStreamResolver.resolve(
+                executable == null || executable.isBlank() ? "yt-dlp" : executable.trim(),
+                format == null || format.isBlank() ? LiveStreamResolver.DEFAULT_FORMAT : format.trim(),
+                source.value(), timeout);
+        state.set("connecting");
+        return address;
     }
 
     private void publishAudio(Buffer samples) {
@@ -345,6 +372,11 @@ final class FfmpegSourceWorker implements SourceWorker {
             grabber.setOption("probesize", "10000000");
             grabber.setOption("rw_timeout", Long.toString(
                     TimeUnit.SECONDS.toMicros(ioTimeoutSeconds)));
+        }
+        if (source.type() == SourceType.LIVE) {
+            grabber.setOption("reconnect", "1");
+            grabber.setOption("reconnect_streamed", "1");
+            grabber.setOption("reconnect_delay_max", "5");
         }
     }
 
