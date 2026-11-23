@@ -549,6 +549,12 @@ final class PlaybackController {
 
     private PlaybackItem selectItem(
             String screenId, PlaylistDefinition playlist, RuntimeState state, long now) {
+        if (playlist.order() == PlaylistOrder.SEQUENCE) {
+            return selectSequential(screenId, playlist, state, now);
+        }
+        if (playlist.order() == PlaylistOrder.SHUFFLE) {
+            return selectShuffled(screenId, playlist, state, now);
+        }
         List<PlaybackItem> eligible = new ArrayList<>(playlist.items().size());
         for (PlaybackItem item : playlist.items()) {
             if (item.enabled() && item.conditions().matches(plugin, screenId)
@@ -608,6 +614,63 @@ final class PlaybackController {
             }
         }
         return eligible.getLast();
+    }
+
+    private boolean playable(String screenId, PlaybackItem item, RuntimeState state, long now) {
+        return item.enabled() && item.conditions().matches(plugin, screenId)
+                && state.cooldownUntilMillis(item.key()) <= now;
+    }
+
+    private PlaybackItem selectSequential(
+            String screenId, PlaylistDefinition playlist, RuntimeState state, long now) {
+        List<PlaybackItem> items = playlist.items();
+        int start = 0;
+        for (int index = 0; index < items.size(); index++) {
+            if (items.get(index).key().equals(state.currentItem)) {
+                start = index + 1;
+                break;
+            }
+        }
+        for (int offset = 0; offset < items.size(); offset++) {
+            PlaybackItem candidate = items.get((start + offset) % items.size());
+            if (playable(screenId, candidate, state, now)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private PlaybackItem selectShuffled(
+            String screenId, PlaylistDefinition playlist, RuntimeState state, long now) {
+        if (!playlist.id().equals(state.shufflePlaylist)) {
+            state.shufflePlaylist = playlist.id();
+            state.shuffleBag.clear();
+        }
+        for (int attempt = 0; attempt < 2; attempt++) {
+            if (state.shuffleBag.isEmpty()) {
+                List<String> round = new ArrayList<>();
+                for (PlaybackItem item : playlist.items()) {
+                    if (item.enabled()) {
+                        round.add(item.key());
+                    }
+                }
+                java.util.Collections.shuffle(round, random);
+                // Never repeat the item that just finished as the first one of a new round.
+                if (round.size() > 1 && round.getFirst().equals(state.currentItem)) {
+                    java.util.Collections.swap(round, 0, round.size() - 1);
+                }
+                state.shuffleBag.addAll(round);
+            }
+            while (!state.shuffleBag.isEmpty()) {
+                String key = state.shuffleBag.pollFirst();
+                PlaybackItem candidate = playlist.items().stream()
+                        .filter(item -> item.key().equals(key)).findFirst().orElse(null);
+                if (candidate != null && playable(screenId, candidate, state, now)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
     }
 
     private boolean playItem(String screenId, PlaybackItem item, RuntimeState state, long now) {
@@ -689,7 +752,8 @@ final class PlaybackController {
             List<PlaybackItem> items = readItems(id, section, "items");
             result.put(id, new PlaylistDefinition(id, items,
                     Math.max(0, section.getInt("history-window", 1)),
-                    Math.max(0, section.getInt("category-history-window", 1))));
+                    Math.max(0, section.getInt("category-history-window", 1)),
+                    PlaylistOrder.parse(section.getString("order", "random"))));
         }
         return result;
     }
@@ -731,6 +795,13 @@ final class PlaybackController {
             }
             PlaybackItem item = PlaybackItem.fromSection(
                     ownerId, rawItemId, itemSection, defaultDuration);
+            if (item != null && item.source() != null
+                    && "auto".equalsIgnoreCase(String.valueOf(itemSection.get("duration")).trim())) {
+                long length = plugin.mediaDurations().millis(item.source());
+                if (length > 0) {
+                    item = item.withDuration(length);
+                }
+            }
             if (item != null) {
                 items.add(cacheFolderSources(item));
             }
@@ -754,8 +825,28 @@ final class PlaybackController {
             String id,
             List<PlaybackItem> items,
             int historyWindow,
-            int categoryHistoryWindow
+            int categoryHistoryWindow,
+            PlaylistOrder order
     ) {
+    }
+
+    /** How the next playlist item is chosen. */
+    enum PlaylistOrder {
+        /** Weighted random roll with anti-repeat rules (the original behaviour). */
+        RANDOM,
+        /** Items play in config order and the list starts again after the last one. */
+        SEQUENCE,
+        /** Every item plays once per round in a new random order, then the round repeats. */
+        SHUFFLE;
+
+        static PlaylistOrder parse(String value) {
+            String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+            return switch (normalized) {
+                case "sequence", "sequential", "order", "loop", "sirali" -> SEQUENCE;
+                case "shuffle", "shuffled", "karisik" -> SHUFFLE;
+                default -> RANDOM;
+            };
+        }
     }
 
     private record EventDefinition(String id, int priority, List<PlaybackItem> sequence) {
@@ -777,6 +868,8 @@ final class PlaybackController {
         private final Deque<String> recentItemKeys = new ArrayDeque<>();
         private final Deque<String> recentCategories = new ArrayDeque<>();
         private final Map<String, Long> lastPlayedMillis = new HashMap<>();
+        private final Deque<String> shuffleBag = new ArrayDeque<>();
+        private String shufflePlaylist = "";
         private final long createdAtMillis = System.currentTimeMillis();
         private EventPlayback activeEvent;
         private String currentItem = "";
@@ -949,6 +1042,13 @@ final class PlaybackController {
                     "", "", "", section.getString("category", ""),
                     DurationParser.parseMillis(section.get("guaranteed-after"), 0),
                     weight, duration, cooldown, enabled, conditions);
+        }
+
+        private PlaybackItem withDuration(long millis) {
+            return new PlaybackItem(ownerId, id, type, source, folder, mediaTypes,
+                    folderSources, message, actionValue, target, category,
+                    guaranteedAfterMillis, weight, Math.max(1_000, millis),
+                    cooldownMillis, enabled, conditions);
         }
 
         private PlaybackItem withFolderSources(List<ScreenSource> sources) {

@@ -836,7 +836,7 @@ final class StudioWebServer {
         if (path == null || path.length() > 180 || path.contains("..")) return false;
         return path.matches("screens\\.[a-z0-9_-]{1,32}\\.(fps|distance|enabled|permission-required|playlist)")
                 || path.matches("screens\\.[a-z0-9_-]{1,32}\\.audio\\.(enabled|distance)")
-                || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.(default-duration|history-window|category-history-window)")
+                || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.(default-duration|history-window|category-history-window|order)")
                 || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.items\\.[a-z0-9_-]{1,32}\\.(type|value|text|weight|duration|cooldown|enabled|guaranteed-after|category)")
                 || path.matches("playlists\\.[a-z0-9_-]{1,32}\\.items\\.[a-z0-9_-]{1,32}\\.conditions\\.(min-online|max-online|min-viewers|max-viewers|any-viewer-permission|all-viewers-permission|tps-above|tps-below|world|chance)")
                 || path.matches("events\\.[a-z0-9_-]{1,32}\\.(priority)")
@@ -907,6 +907,10 @@ final class StudioWebServer {
             return numberBetween(value, 0, 20);
         }
         if (path.endsWith(".conditions.chance")) return numberBetween(value, 0, 1);
+        if (path.matches("playlists\\.[a-z0-9_-]{1,32}\\.order")) {
+            return Set.of("random", "sequence", "shuffle").contains(String.valueOf(value));
+        }
+        if (path.endsWith(".duration") && "auto".equals(value)) return true;
         if (path.endsWith(".duration") || path.endsWith(".cooldown")
                 || path.endsWith(".guaranteed-after") || path.endsWith("default-duration")) {
             long duration = DurationParser.parseMillis(value, -1);

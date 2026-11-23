@@ -49,6 +49,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
     private final java.util.Set<String> frameOnlyScreens = ConcurrentHashMap.newKeySet();
     private final ScreenAudioManager audio = new ScreenAudioManager(this);
     private final YoutubeDownloader youtube = new YoutubeDownloader(this);
+    private final MediaDurationProbe mediaDurations = new MediaDurationProbe(this);
     private MapEngineApi mapEngine;
     private DebugBossBarManager debugBossBars;
     private MediaMtxSetupManager mediaMtxSetup;
@@ -156,6 +157,10 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
 
     YoutubeDownloader youtube() {
         return youtube;
+    }
+
+    MediaDurationProbe mediaDurations() {
+        return mediaDurations;
     }
 
     ScreenAudioManager.ScreenAudioSettings screenAudio(String id) {

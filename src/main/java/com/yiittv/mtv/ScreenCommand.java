@@ -21,7 +21,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
             "create", "clone", "list", "start", "stop", "remove",
-            "status", "source", "playlist", "event", "set", "reload", "debug",
+            "status", "source", "playlist", "loop", "event", "set", "reload", "debug",
             "mediamtx", "menu", "studio", "web", "vote");
     private static final List<String> SET_PROPERTIES =
             List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance");
@@ -57,6 +57,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             case "status" -> status(sender, args);
             case "source" -> source(sender, args);
             case "playlist" -> playlist(sender, args);
+            case "loop" -> loop(sender, args);
             case "event" -> event(sender, args);
             case "set" -> set(sender, args);
             case "debug" -> debug(sender);
@@ -355,6 +356,155 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                 message(sender, "commands.source-failed", "screen", String.join(", ", failed));
             }
         });
+    }
+
+    /**
+     * /mtv loop <billboard[,billboard2]> <sequence|shuffle> <link-or-file>...
+     * /mtv loop <billboard[,billboard2]> stop
+     */
+    private void loop(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            message(sender, "commands.loop-usage");
+            return;
+        }
+        List<String> targets = screenTargets(sender, args[1]);
+        if (targets == null) {
+            return;
+        }
+        String mode = args[2].toLowerCase(Locale.ROOT);
+        if (List.of("stop", "durdur", "off").contains(mode)) {
+            for (String target : targets) {
+                plugin.clearScreenPlaylist(target);
+            }
+            message(sender, "commands.loop-stopped", "screens", String.join(", ", targets));
+            return;
+        }
+        String order = switch (mode) {
+            case "sequence", "sirali", "order" -> "sequence";
+            case "shuffle", "karisik", "random" -> "shuffle";
+            default -> null;
+        };
+        if (order == null || args.length < 4) {
+            message(sender, "commands.loop-usage");
+            return;
+        }
+        List<String> inputs = List.of(args).subList(3, args.length);
+        if (inputs.size() > 50) {
+            message(sender, "commands.loop-usage");
+            return;
+        }
+        message(sender, "commands.loop-preparing",
+                "count", inputs.size(), "screens", String.join(", ", targets));
+        resolveLoopItems(sender, inputs, 0, new ArrayList<>(), paths ->
+                startLoop(sender, targets, order, paths));
+    }
+
+    private void resolveLoopItems(CommandSender sender, List<String> inputs, int index,
+                                  List<String> resolved,
+                                  java.util.function.Consumer<List<String>> done) {
+        if (index >= inputs.size()) {
+            done.accept(resolved);
+            return;
+        }
+        String input = inputs.get(index);
+        String videoId = YoutubeDownloader.videoId(input).orElse(null);
+        boolean looksLikeYoutube = input.contains("youtu") || (videoId != null && !input.contains("."));
+        if (looksLikeYoutube) {
+            if (videoId == null) {
+                message(sender, "commands.loop-item-invalid", "item", input);
+                return;
+            }
+            plugin.youtube().ensure(videoId, false, result -> {
+                if (!result.ok()) {
+                    message(sender, "commands.youtube-failed", "video", videoId,
+                            "error", result.error());
+                    return;
+                }
+                resolved.add(result.mediaPath());
+                resolveLoopItems(sender, inputs, index + 1, resolved, done);
+            });
+            return;
+        }
+        ScreenSource local = new ScreenSource(
+                input.toLowerCase(Locale.ROOT).endsWith(".gif") ? SourceType.GIF : SourceType.VIDEO,
+                input);
+        try {
+            if (!local.isValid() || local.usesRemoteLocation()) {
+                throw new java.io.IOException("not a local media file");
+            }
+            plugin.resolveSourceInput(local);
+        } catch (java.io.IOException exception) {
+            message(sender, "commands.loop-item-invalid", "item", input);
+            return;
+        }
+        resolved.add(local.value());
+        resolveLoopItems(sender, inputs, index + 1, resolved, done);
+    }
+
+    private void startLoop(CommandSender sender, List<String> targets, String order,
+                           List<String> paths) {
+        String playlist = loopPlaylistId(targets.getFirst());
+        String base = "playlists." + playlist;
+        org.bukkit.configuration.file.FileConfiguration config = plugin.getConfig();
+        config.set(base, null);
+        config.set(base + ".order", order);
+        config.set(base + ".history-window", 0);
+        config.set(base + ".category-history-window", 0);
+        for (int index = 0; index < paths.size(); index++) {
+            String path = paths.get(index);
+            String item = base + ".items.v" + (index + 1);
+            config.set(item + ".type", path.toLowerCase(Locale.ROOT).endsWith(".gif")
+                    ? SourceType.GIF.id() : SourceType.VIDEO.id());
+            config.set(item + ".value", path);
+            config.set(item + ".duration", "auto");
+            config.set(item + ".weight", 1);
+        }
+        plugin.saveConfig();
+        plugin.reloadPlaybackDefinitions();
+        if (plugin.studio() != null) {
+            plugin.studio().refreshMediaAsync();
+        }
+        List<String> failed = new ArrayList<>();
+        for (String target : targets) {
+            if (!plugin.setScreenPlaylist(target, playlist)) {
+                failed.add(target);
+            }
+        }
+        if (failed.isEmpty()) {
+            message(sender, "commands.loop-started", "count", paths.size(),
+                    "screens", String.join(", ", targets), "playlist", playlist,
+                    "order", order);
+        } else {
+            message(sender, "commands.loop-failed", "screens", String.join(", ", failed));
+        }
+    }
+
+    static String loopPlaylistId(String screen) {
+        String id = "loop_" + ScreenDefinition.normalizeId(screen);
+        return id.length() > 32 ? id.substring(0, 32) : id;
+    }
+
+    /** Parses "a,b,c" into existing screen ids, or reports the first missing one. */
+    private List<String> screenTargets(CommandSender sender, String raw) {
+        List<String> targets = new ArrayList<>();
+        for (String part : raw.split(",")) {
+            String id = ScreenDefinition.normalizeId(part);
+            if (id.isBlank()) {
+                continue;
+            }
+            if (!plugin.hasScreen(id)) {
+                message(sender, "commands.screen-missing", "screen", id);
+                return null;
+            }
+            if (!targets.contains(id)) {
+                targets.add(id);
+            }
+        }
+        if (targets.isEmpty()) {
+            message(sender, "commands.loop-usage");
+            return null;
+        }
+        return targets;
     }
 
     private void playlist(CommandSender sender, String[] args) {
@@ -657,6 +807,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         message(sender, "commands.help-control");
         message(sender, "commands.help-source");
         message(sender, "commands.help-youtube");
+        message(sender, "commands.help-loop");
         message(sender, "commands.help-playback");
         message(sender, "commands.help-set");
         message(sender, "commands.help-debug");
@@ -764,6 +915,12 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             types.add("youtube");
             types.add("types");
             return matching(types, args[2]);
+        }
+        if (args.length == 2 && subcommand.equals("loop")) {
+            return matching(plugin.screenIds(), args[1]);
+        }
+        if (args.length == 3 && subcommand.equals("loop")) {
+            return matching(List.of("sequence", "shuffle", "stop"), args[2]);
         }
         if (args.length == 2 && subcommand.equals("playlist")) {
             return matching(List.of("list", "set", "clear"), args[1]);

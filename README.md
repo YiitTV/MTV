@@ -146,6 +146,25 @@ point one or more billboards at a YouTube link:
 - `refresh` downloads the video again, for example after you re-upload it.
 - Only show videos you own or have the right to show; YouTube's terms apply.
 
+## Looping several videos
+
+`/mtv loop` builds a playlist from YouTube links and media files and loops it on
+one or more billboards:
+
+```text
+/mtv loop spawn_billboard sequence https://youtu.be/AAA https://youtu.be/BBB intro.mp4
+/mtv loop spawn_billboard,market_billboard shuffle https://youtu.be/AAA https://youtu.be/BBB
+/mtv loop spawn_billboard stop
+```
+
+- `sequence` plays the videos in the given order and starts again after the last.
+- `shuffle` plays every video once per round in a new random order and never
+  repeats the last video at the start of the next round.
+- Each video plays for its full length (`duration: auto`, read from the file).
+- The playlist is saved as `loop_<billboard>` in `config.yml`. Any playlist can use
+  `order: random|sequence|shuffle`, and video items can use `duration: auto`.
+- A single video on a billboard already loops by itself.
+
 ## Audio (Plasmo Voice)
 
 MTV can play the audio of videos and RTMP streams at the screen position
@@ -188,7 +207,7 @@ The shaded plugin JAR is created in `target/`.
 
 ## Verification
 
-The current suite contains 75 automated tests covering:
+The current suite contains 78 automated tests covering:
 
 - RTMP URL and error-message sanitization
 - Screen corner calculation for every vertical direction
@@ -211,6 +230,7 @@ The current suite contains 75 automated tests covering:
 - Web Studio JSON serialization, login security and bundled resources
 - Audio framing, volume and audio distance limits
 - YouTube link parsing and yt-dlp command construction
+- Loop playlist order parsing and generated playlist names
 
 ## Platform limits
 
