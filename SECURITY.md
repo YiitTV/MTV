@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-LuigiScreen is currently in alpha. Only the latest published alpha receives
+MTV is currently in alpha. Only the latest published alpha receives
 security fixes.
 
 ## Reporting a vulnerability
@@ -20,5 +20,5 @@ reporting step.
 
 ## Logs
 
-LuigiScreen masks common credentials in its own status output and logs, but
+MTV masks common credentials in its own status output and logs, but
 administrators must still review all files before sharing them publicly.

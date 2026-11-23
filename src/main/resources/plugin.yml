@@ -1,164 +1,165 @@
-name: LuigiScreen
+name: MTV
 version: '${project.version}'
-main: cz.luigismp.screen.LuigiScreenPlugin
+main: com.yiittv.mtv.MtvPlugin
 api-version: '1.21.11'
 depend: [MapEngine]
-authors: [unknown_56]
-description: A server-side Paper/Bukkit plugin for live media map screens.
+softdepend: [PlasmoVoice]
+authors: [YiitTV, unknown_56]
+description: MTV - billboard and media map screens with Plasmo Voice audio. Unofficial modified build based on LuigiScreen.
 
 commands:
-  luigiscreen:
-    description: Manage LuigiScreen media screens and Control Studio.
-    aliases: [screen]
-    usage: /screen <menu|web|create|clone|list|start|stop|remove|status|source|playlist|event|vote|set|reload|debug|mediamtx>
+  mtv:
+    description: Manage MTV media screens and Control Studio.
+    aliases: [tv]
+    usage: /mtv <menu|web|create|clone|list|start|stop|remove|status|source|playlist|event|vote|set|reload|debug|mediamtx>
 
 permissions:
-  luigiscreen.admin:
-    description: Grants every LuigiScreen command and access to protected screens.
+  mtv.admin:
+    description: Grants every MTV command and access to protected screens.
     default: op
     children:
-      luigiscreen.create: true
-      luigiscreen.clone: true
-      luigiscreen.list: true
-      luigiscreen.start: true
-      luigiscreen.stop: true
-      luigiscreen.remove: true
-      luigiscreen.status: true
-      luigiscreen.source: true
-      luigiscreen.playlist: true
-      luigiscreen.event: true
-      luigiscreen.set: true
-      luigiscreen.reload: true
-      luigiscreen.debug: true
-      luigiscreen.mediamtx: true
-      luigiscreen.update: true
-      luigiscreen.vote: true
-      luigiscreen.web: true
-      luigiscreen.menu.*: true
-      luigiscreen.see.*: true
-  luigiscreen.create:
+      mtv.create: true
+      mtv.clone: true
+      mtv.list: true
+      mtv.start: true
+      mtv.stop: true
+      mtv.remove: true
+      mtv.status: true
+      mtv.source: true
+      mtv.playlist: true
+      mtv.event: true
+      mtv.set: true
+      mtv.reload: true
+      mtv.debug: true
+      mtv.mediamtx: true
+      mtv.update: true
+      mtv.vote: true
+      mtv.web: true
+      mtv.menu.*: true
+      mtv.see.*: true
+  mtv.create:
     description: Allows creating screens.
     default: false
-  luigiscreen.clone:
+  mtv.clone:
     description: Allows cloning screens.
     default: false
-  luigiscreen.list:
+  mtv.list:
     description: Allows listing configured screens.
     default: false
-  luigiscreen.start:
+  mtv.start:
     description: Allows enabling screens.
     default: false
-  luigiscreen.stop:
+  mtv.stop:
     description: Allows disabling screens.
     default: false
-  luigiscreen.remove:
+  mtv.remove:
     description: Allows removing screens.
     default: false
-  luigiscreen.status:
+  mtv.status:
     description: Allows viewing screen and stream status.
     default: false
-  luigiscreen.source:
+  mtv.source:
     description: Allows viewing and changing screen media sources.
     default: false
-  luigiscreen.playlist:
+  mtv.playlist:
     description: Allows assigning and clearing screen playlists.
     default: false
-  luigiscreen.event:
+  mtv.event:
     description: Allows playing and stopping screen events.
     default: false
-  luigiscreen.set:
+  mtv.set:
     description: Allows changing per-screen settings.
     default: false
-  luigiscreen.reload:
-    description: Allows reloading LuigiScreen.
+  mtv.reload:
+    description: Allows reloading MTV.
     default: false
-  luigiscreen.debug:
-    description: Allows viewing LuigiScreen debug statistics.
+  mtv.debug:
+    description: Allows viewing MTV debug statistics.
     default: false
-  luigiscreen.mediamtx:
+  mtv.mediamtx:
     description: Allows generating MediaMTX configurations and credentials.
     default: false
-  luigiscreen.update:
-    description: Receives notifications when a newer LuigiScreen version is available.
+  mtv.update:
+    description: Receives notifications when a newer MTV version is available.
     default: op
-  luigiscreen.menu.*:
-    description: Grants access to every LuigiScreen Control Studio section.
+  mtv.menu.*:
+    description: Grants access to every MTV Control Studio section.
     default: false
     children:
-      luigiscreen.menu.dashboard: true
-      luigiscreen.menu.screens: true
-      luigiscreen.menu.media: true
-      luigiscreen.menu.playlists: true
-      luigiscreen.menu.events: true
-      luigiscreen.menu.automations: true
-      luigiscreen.menu.live: true
-      luigiscreen.menu.groups: true
-      luigiscreen.menu.schedules: true
-      luigiscreen.menu.templates: true
-      luigiscreen.menu.diagnostics: true
-      luigiscreen.menu.monitoring: true
-      luigiscreen.menu.configuration: true
-      luigiscreen.menu.settings: true
-      luigiscreen.menu.history: true
-      luigiscreen.menu.emergency: true
-      luigiscreen.menu.control: true
-  luigiscreen.menu.dashboard:
-    description: Opens LuigiScreen Control Studio.
+      mtv.menu.dashboard: true
+      mtv.menu.screens: true
+      mtv.menu.media: true
+      mtv.menu.playlists: true
+      mtv.menu.events: true
+      mtv.menu.automations: true
+      mtv.menu.live: true
+      mtv.menu.groups: true
+      mtv.menu.schedules: true
+      mtv.menu.templates: true
+      mtv.menu.diagnostics: true
+      mtv.menu.monitoring: true
+      mtv.menu.configuration: true
+      mtv.menu.settings: true
+      mtv.menu.history: true
+      mtv.menu.emergency: true
+      mtv.menu.control: true
+  mtv.menu.dashboard:
+    description: Opens MTV Control Studio.
     default: op
-  luigiscreen.menu.screens:
+  mtv.menu.screens:
     description: Views screens and their details in Control Studio.
     default: false
-  luigiscreen.menu.media:
+  mtv.menu.media:
     description: Views and cues Media Library sources.
     default: false
-  luigiscreen.menu.playlists:
+  mtv.menu.playlists:
     description: Views, simulates and assigns playlists.
     default: false
-  luigiscreen.menu.events:
+  mtv.menu.events:
     description: Views and starts event timelines.
     default: false
-  luigiscreen.menu.automations:
+  mtv.menu.automations:
     description: Views Web Studio automation rules.
     default: false
-  luigiscreen.menu.live:
+  mtv.menu.live:
     description: Uses Live Control Room.
     default: false
-  luigiscreen.menu.groups:
+  mtv.menu.groups:
     description: Controls screen groups.
     default: false
-  luigiscreen.menu.schedules:
+  mtv.menu.schedules:
     description: Views the schedule calendar.
     default: false
-  luigiscreen.menu.templates:
+  mtv.menu.templates:
     description: Installs starter templates.
     default: false
-  luigiscreen.menu.diagnostics:
+  mtv.menu.diagnostics:
     description: Views screen diagnostics.
     default: false
-  luigiscreen.menu.monitoring:
+  mtv.menu.monitoring:
     description: Views Web Studio performance monitoring.
     default: false
-  luigiscreen.menu.configuration:
+  mtv.menu.configuration:
     description: Stages and publishes safe Web Studio configuration changes.
     default: false
-  luigiscreen.menu.settings:
+  mtv.menu.settings:
     description: Views Web Studio server and session settings.
     default: false
-  luigiscreen.menu.history:
+  mtv.menu.history:
     description: Views the studio audit history.
     default: false
-  luigiscreen.menu.emergency:
+  mtv.menu.emergency:
     description: Enables or disables global emergency mode.
     default: false
-  luigiscreen.menu.control:
+  mtv.menu.control:
     description: Changes playback and screen state from menus.
     default: false
-  luigiscreen.vote:
-    description: Allows a player to vote in active LuigiScreen media votes.
+  mtv.vote:
+    description: Allows a player to vote in active MTV media votes.
     default: true
-  luigiscreen.web:
-    description: Creates and revokes secure LuigiScreen Studio web sessions.
+  mtv.web:
+    description: Creates and revokes secure MTV Studio web sessions.
     default: op
-  luigiscreen.see.*:
+  mtv.see.*:
     description: Allows viewing every permission-protected screen.
     default: false

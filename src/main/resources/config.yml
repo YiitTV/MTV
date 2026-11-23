@@ -1,14 +1,14 @@
 language: en
 
 web-studio:
-  # LAN-ready by default. /screen web creates a one-time login link and still protects access.
+  # LAN-ready by default. /mtv web creates a one-time login link and still protects access.
   enabled: true
   bind: "0.0.0.0"
   port: 8765
   # Set this when Studio is exposed through a reverse proxy, for example:
   # public-url: "https://studio.example.com"
   public-url: ""
-  server-name: "LuigiScreen Server"
+  server-name: "MTV Server"
   session-hours: 8
   login-token-minutes: 5
   live-update-millis: 1000
@@ -17,10 +17,12 @@ web-studio:
   preview-max-width: 640
 
 updates:
-  # Checks the public Modrinth project without blocking the server thread.
-  enabled: true
-  project: luigiscreen
-  modrinth-url: "https://modrinth.com/plugin/luigiscreen"
+  # Checks a public Modrinth project without blocking the server thread.
+  # Disabled by default: MTV is not published on Modrinth yet. Set project and
+  # modrinth-url to your own published project before enabling it.
+  enabled: false
+  project: ""
+  modrinth-url: ""
   check-interval-hours: 6
   timeout-seconds: 10
   notify-console: true
@@ -56,7 +58,7 @@ playback:
   tick-seconds: 1
 
 # Optional named rotations. Enable one on a screen with:
-# /screen playlist set <screen> <playlist>
+# /mtv playlist set <screen> <playlist>
 playlists:
   example_rotation:
     default-duration: 30s
@@ -84,7 +86,7 @@ playlists:
           min-viewers: 1
 
 # Optional manual event scenes. Play one with:
-# /screen event play <screen> <event>
+# /mtv event play <screen> <event>
 events:
   example_announcement:
     priority: 50

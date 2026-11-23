@@ -1,4 +1,4 @@
-prefix: "<dark_gray>[<green>LuigiScreen</green>]</dark_gray> "
+prefix: "<dark_gray>[<green>MTV</green>]</dark_gray> "
 
 common:
   none: "žádná"
@@ -8,30 +8,30 @@ common:
 
 commands:
   vote-player-only: "<red>Příkazy hlasování může použít pouze hráč.</red>"
-  vote-usage: "<red>Použití: /screen vote <plátno> <volba> nebo /screen vote start|status|end <plátno> [volby...]</red>"
+  vote-usage: "<red>Použití: /mtv vote <plátno> <volba> nebo /mtv vote start|status|end <plátno> [volby...]</red>"
   vote-started: "<green>Na plátně <screen> začalo hlasování o médium.</green>"
   vote-ended: "<green>Hlasování na <screen> skončilo a vítěz byl vložen do fronty.</green>"
   vote-cast: "<green>Tvůj hlas byl zaznamenán.</green>"
   vote-failed: "<red>Akci hlasování pro <screen> se nepodařilo dokončit.</red>"
   vote-status: "<gray>Hlasování na <screen>: <votes> hlasů; <results></gray>"
-  help-vote: "<white>/screen vote ...</white><gray> - spustí, použije nebo ukončí hlasování</gray>"
+  help-vote: "<white>/mtv vote ...</white><gray> - spustí, použije nebo ukončí hlasování</gray>"
   menu-player-only: "<red>Ovládací studio může otevřít pouze hráč.</red>"
-  help-menu: "<white>/screen menu</white><gray> - otevře ovládací studio LuigiScreen</gray>"
-  web-link: "<green>Otevři LuigiScreen Studio (<label>):</green> <aqua><underlined><url></underlined></aqua>"
+  help-menu: "<white>/mtv menu</white><gray> - otevře ovládací studio MTV</gray>"
+  web-link: "<green>Otevři MTV Studio (<label>):</green> <aqua><underlined><url></underlined></aqua>"
   web-link-extra: "<gray>Záložní odkaz (<label>):</gray> <aqua><underlined><url></underlined></aqua>"
   web-hover: "<gray>Jednorázový přihlašovací odkaz. Brzy vyprší a nesmíš ho sdílet.</gray>"
   web-status: "<gray>Web Studio: <white><status></white></gray>"
   web-revoked: "<green>Zrušené relace Web Studia: <count>.</green>"
   web-lan-enabled: "<green>Web Studio jsem automaticky přepnul do LAN režimu. Config ručně upravovat nemusíš.</green>"
   web-firewall-tip: "<gray>Pokud se LAN odkaz z jiného PC nenačte, povol na serverovém PC ve Windows Firewallu TCP port 8765 pro Java/OpenJDK.</gray>"
-  web-unavailable: "<red>Web Studio se nepodařilo spustit. Dej /screen web status a zkontroluj, jestli je TCP port 8765 volný.</red>"
-  help-web: "<white>/screen web [open|status|revoke]</white><gray> - otevře zabezpečený odkaz do Web Studia</gray>"
+  web-unavailable: "<red>Web Studio se nepodařilo spustit. Dej /mtv web status a zkontroluj, jestli je TCP port 8765 volný.</red>"
+  help-web: "<white>/mtv web [open|status|revoke]</white><gray> - otevře zabezpečený odkaz do Web Studia</gray>"
   no-permission: "<red>Pro tento příkaz potřebuješ oprávnění <permission>.</red>"
   screen-missing: "<red>Plátno <screen> neexistuje.</red>"
   target-required: "<red>Existuje více pláten. Přidej název plátna nebo použij all.</red>"
   invalid-name: "<red>Název plátna smí obsahovat pouze a-z, 0-9, _ nebo - a nejvýše 32 znaků.</red>"
   name-exists: "<red>Plátno s názvem <screen> už existuje.</red>"
-  clone-usage: "<red>Použití: /screen clone <zdroj> <nový-název></red>"
+  clone-usage: "<red>Použití: /mtv clone <zdroj> <nový-název></red>"
   clone-success: "<green>Plátno <source> bylo naklonováno jako <screen>. Dokud mají stejný typ a hodnotu zdroje, sdílejí jeden načítač.</green>"
   clone-failed: "<red>Na tomto místě se plátno nepodařilo naklonovat.</red>"
   list-header: "<green>Počet pláten: <screens>, sdílené zdroje: <sources>:</green>"
@@ -41,33 +41,33 @@ commands:
   screen-removed: "<green>Plátno <screen> bylo odstraněno.</green>"
   all-started: "<green>Zapnuto pláten: <count>.</green>"
   all-stopped: "<green>Vypnuto pláten: <count>.</green>"
-  set-usage: "<red>Použití: /screen set <název> <url|fps|distance|enabled|permission> <hodnota></red>"
+  set-usage: "<red>Použití: /mtv set <název> <url|fps|distance|enabled|permission> <hodnota></red>"
   set-success: "<green>Vlastnost <property> plátna <screen> byla upravena.</green>"
   set-invalid: "<red>Neplatná hodnota pro <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission: true/false.</red>"
-  source-usage: "<red>Použití: /screen source <název> <rtmp|mjpeg|video|image|url-image|gif> <hodnota></red>"
+  source-usage: "<red>Použití: /mtv source <název> <rtmp|mjpeg|video|image|url-image|gif> <hodnota></red>"
   source-current: "<gray>Plátno <screen> používá <white><type></white>: <value></gray>"
   source-types: "<gray>Dostupné typy zdrojů: <types></gray>"
-  source-invalid: "<red>Neplatný typ nebo hodnota zdroje. Použij /screen source <název> types.</red>"
+  source-invalid: "<red>Neplatný typ nebo hodnota zdroje. Použij /mtv source <název> types.</red>"
   source-success: "<green>Plátno <screen> nyní používá <type>: <value></green>"
   source-failed: "<red>Zdroj plátna <screen> se nepodařilo přepnout. Původní zdroj zůstal zachovaný.</red>"
   source-folder: "<gray>Složka pro lokální média: <folder></gray>"
-  playlist-usage: "<red>Použití: /screen playlist list|set <plátno> <playlist>|clear <plátno></red>"
+  playlist-usage: "<red>Použití: /mtv playlist list|set <plátno> <playlist>|clear <plátno></red>"
   playlist-empty: "<gray>Nejsou nastavené žádné playlisty.</gray>"
   playlist-list: "<gray>Nastavené playlisty: <playlists></gray>"
   playlist-set: "<green>Plátno <screen> nyní používá playlist <playlist>.</green>"
   playlist-failed: "<red>Playlist <playlist> se nepodařilo nastavit pro plátno <screen>.</red>"
   playlist-cleared: "<green>Plátno <screen> se vrátilo na svůj uložený zdroj.</green>"
   playlist-clear-failed: "<red>Playlist plátna <screen> se nepodařilo vypnout.</red>"
-  event-usage: "<red>Použití: /screen event list|play <plátno> <event>|stop <plátno></red>"
+  event-usage: "<red>Použití: /mtv event list|play <plátno> <event>|stop <plátno></red>"
   event-empty: "<gray>Nejsou nastavené žádné eventy.</gray>"
   event-list: "<gray>Nastavené eventy: <events></gray>"
   event-started: "<green>Spouštím event <event> na plátně <screen>.</green>"
   event-failed: "<red>Event <event> se nepodařilo spustit na plátně <screen>.</red>"
   event-stopped: "<green>Event na plátně <screen> byl zastaven.</green>"
   event-stop-failed: "<red>Event na plátně <screen> se nepodařilo zastavit.</red>"
-  help-clone: "<white>/screen clone <zdroj> <nový-název></white><gray> - vytvoří další plátno se sdíleným zdrojem</gray>"
-  help-set: "<white>/screen set <název> <url|fps|distance|enabled|permission> <hodnota></white>"
-  no-display: "<red>Nejdříve vytvoř plátno: /screen create main 7 4</red>"
+  help-clone: "<white>/mtv clone <zdroj> <nový-název></white><gray> - vytvoří další plátno se sdíleným zdrojem</gray>"
+  help-set: "<white>/mtv set <název> <url|fps|distance|enabled|permission> <hodnota></white>"
+  no-display: "<red>Nejdříve vytvoř plátno: /mtv create main 7 4</red>"
   stream-connecting: "<green>Připojuji se ke zdroji médií...</green>"
   stream-already-running: "<red>Zdroj už běží.</red>"
   stream-stopped: "<green>Zdroj byl zastaven.</green>"
@@ -77,7 +77,7 @@ commands:
   reload-success: "<green>Konfigurace, jazyk a plátno byly znovu načteny.</green>"
   reload-failed: "<red>Opětovné načtení se nezdařilo. Podívej se do konzole.</red>"
   debug-player-only: "<red>Debug bossbar může použít pouze hráč.</red>"
-  debug-enabled: "<green>Debug bossbar a sidebar byly zapnuty. Příkazem /screen debug je znovu vypneš.</green>"
+  debug-enabled: "<green>Debug bossbar a sidebar byly zapnuty. Příkazem /mtv debug je znovu vypneš.</green>"
   debug-disabled: "<green>Debug bossbar a sidebar byly vypnuty.</green>"
   mediamtx-player-only: "<red>Průvodce MediaMTX může použít pouze hráč.</red>"
   create-player-only: "<red>Tento příkaz musí použít hráč.</red>"
@@ -86,17 +86,17 @@ commands:
   create-look-at-wall: "<red>Dívej se na levý horní blok svislé stěny.</red>"
   create-success: "<green>Vytvořeno plátno <screen> o velikosti <width>x<height>. Spouštím jeho zdroj...</green>"
   create-failed: "<red>Plátno se nepodařilo vytvořit. Zkontroluj název, velikost a umístění.</red>"
-  help-create: "<white>/screen create <název> [šířka] [výška]</white><gray> - vytvoří pojmenované plátno na stěně</gray>"
-  help-control: "<white>/screen list|status [název]|start|stop <název|all>|remove <název>|reload</white>"
-  help-source: "<white>/screen source <název> <typ> <hodnota></white><gray> - přepne RTMP, MJPEG, video, obrázek, URL obrázek nebo GIF</gray>"
-  help-playback: "<white>/screen playlist ... | /screen event ...</white><gray> - rotuje média nebo spustí ruční event scénu</gray>"
-  help-debug: "<white>/screen debug</white><gray> - zapne nebo vypne živý výkonový bossbar a sidebar</gray>"
-  help-mediamtx: "<white>/screen mediamtx <argument></white><gray> - spustí průvodce nastavením MediaMTX</gray>"
+  help-create: "<white>/mtv create <název> [šířka] [výška]</white><gray> - vytvoří pojmenované plátno na stěně</gray>"
+  help-control: "<white>/mtv list|status [název]|start|stop <název|all>|remove <název>|reload</white>"
+  help-source: "<white>/mtv source <název> <typ> <hodnota></white><gray> - přepne RTMP, MJPEG, video, obrázek, URL obrázek nebo GIF</gray>"
+  help-playback: "<white>/mtv playlist ... | /mtv event ...</white><gray> - rotuje média nebo spustí ruční event scénu</gray>"
+  help-debug: "<white>/mtv debug</white><gray> - zapne nebo vypne živý výkonový bossbar a sidebar</gray>"
+  help-mediamtx: "<white>/mtv mediamtx <argument></white><gray> - spustí průvodce nastavením MediaMTX</gray>"
   mediamtx-argument: "situace"
 
 status:
   missing: "<red>Plátno <screen> neexistuje.</red>"
-  summary: "<gray>Plátna: <screens>, zapnutá: <enabled>, sdílené zdroje: <sources>, celkem map: <maps>. Použij /screen list nebo /screen status <název>.</gray>"
+  summary: "<gray>Plátna: <screens>, zapnutá: <enabled>, sdílené zdroje: <sources>, celkem map: <maps>. Použij /mtv list nebo /mtv status <název>.</gray>"
   no-display: "<gray>Žádné plátno nebylo vytvořeno.</gray>"
   line: "<gray>Plátno <name> <width>x<height>, zapnuto: <enabled>, chráněné: <permission_required> (<view_permission>), zdroj: <source_type> <source_value>, playlist: <playlist>, přehrávání: <playback>, stav: <stream>, sdílí pláten: <shared>, chyba zdroje: <stream_error>, efektivní FPS: <fps>, vzdálenost: <distance>, diváci: <viewers>, přijaté/vykreslené: <received>/<rendered>, chyba vykreslení: <render_error>, svět: <world>, směr: <facing></gray>"
 
@@ -107,8 +107,8 @@ playback:
   event-status: "event <event>, položka <item>"
 
 screen:
-  title: "LuigiSMP"
-  offline-title: "LuigiScreen"
+  title: "MTV"
+  offline-title: "MTV"
   connecting: "Připojování..."
   loading: "Načítání zdroje..."
   stopped: "Zdroj zastaven"
@@ -145,8 +145,8 @@ errors:
   stream_ended: "stream skončil"
 
 debug:
-  starting: "Spouštím debug LuigiScreen..."
-  sidebar-title: "<green><bold>LuigiScreen Debug</bold></green>"
+  starting: "Spouštím debug MTV..."
+  sidebar-title: "<green><bold>MTV Debug</bold></green>"
   sidebar-stream: "<gray>Zdroj:</gray> <white><state></white>"
   sidebar-source: "<gray>Zdroj:</gray> <white><resolution></white> <dark_gray>(<age>)</dark_gray>"
   sidebar-screen: "<gray>Plátna/zdroje:</gray> <white><enabled>/<screens> / <sources></white> <dark_gray>(<width>x<height>)</dark_gray>"
@@ -167,7 +167,7 @@ debug:
   frames: "[SNÍMKY] Přijato <received> (<received_fps>/s) | Vykresleno <rendered> (<rendered_fps>/s) | Nahrazeno <replaced> (<replaced_fps>/s) | Fronta <queue>"
   render: "[VYKRESLENÍ] Poslední <last> ms | Průměr <average> ms | Limit <budget> ms"
   memory: "[PAMĚŤ] JVM heap <heap_used>/<heap_max> | Non-heap <non_heap> | Systém <system_used>/<system_total>"
-  buffers: "[BUFFERY] Obrázky LuigiScreen ~<buffers> | Nativní paměť FFmpeg a MapEngine se neměří"
+  buffers: "[BUFFERY] Obrázky MTV ~<buffers> | Nativní paměť FFmpeg a MapEngine se neměří"
   cpu: "[CPU] Proces <process> | Systém <system> | Vlákna <threads>"
   server: "[SERVER] TPS <tps> | MSPT <mspt> | Doba běhu <uptime> | GC <collections>/<gc_time> ms"
   health: "[STAV] Pokusy o načtení <reconnects> | Chyba zdroje <stream_error> | Chyba vykreslení <render_error>"
@@ -182,11 +182,11 @@ mediamtx:
   failed: "<red>Nastavení MediaMTX se nezdařilo. Podívej se do konzole serveru.</red>"
   private-answer: "<dark_gray>Tvoje další zpráva v chatu je soukromá pro průvodce. Slovem cancel ho ukončíš.</dark_gray>"
   choose: "<yellow>Vyber situaci MediaMTX:</yellow>"
-  option-same-pc: "<white>/screen mediamtx same-pc - vše běží na jednom počítači</white>"
-  option-lan: "<white>/screen mediamtx lan - OBS je na jiném počítači ve stejné síti</white>"
-  option-internet: "<white>/screen mediamtx internet - OBS se připojuje přes veřejnou IP a port forwarding</white>"
-  option-vpn: "<white>/screen mediamtx vpn - CGNAT, Tailscale nebo ZeroTier</white>"
-  option-hosting: "<white>/screen mediamtx hosting - MediaMTX běží na jiném serveru</white>"
+  option-same-pc: "<white>/mtv mediamtx same-pc - vše běží na jednom počítači</white>"
+  option-lan: "<white>/mtv mediamtx lan - OBS je na jiném počítači ve stejné síti</white>"
+  option-internet: "<white>/mtv mediamtx internet - OBS se připojuje přes veřejnou IP a port forwarding</white>"
+  option-vpn: "<white>/mtv mediamtx vpn - CGNAT, Tailscale nebo ZeroTier</white>"
+  option-hosting: "<white>/mtv mediamtx hosting - MediaMTX běží na jiném serveru</white>"
   invalid-host: "<red>Zadej platnou IPv4 adresu nebo hostname. Slovem cancel průvodce ukončíš.</red>"
   invalid-public-host: "<red>Zadej veřejnou IPv4 adresu nebo DNS hostname. Slovem cancel průvodce ukončíš.</red>"
   invalid-vpn-host: "<red>Zadej platnou VPN IP adresu nebo hostname. Slovem cancel průvodce ukončíš.</red>"
@@ -202,7 +202,7 @@ mediamtx:
   prompt-hosting-host: "<gold>Zadej veřejnou IP nebo DNS hostname externího serveru MediaMTX:</gold>"
   prompt-hosting-port: "<gold>Zadej externí RTMP port MediaMTX nebo napiš default:</gold>"
   setup-header: |-
-    Nastavení LuigiScreen MediaMTX
+    Nastavení MTV MediaMTX
     ==============================
 
     Situace: <situation>
@@ -217,7 +217,7 @@ mediamtx:
       Klíč streamu: nechat prázdný
       Použít ověření: vypnuto
 
-    LuigiScreen:
+    MTV:
       Globální výchozí URL a plátna používající předchozí výchozí URL
       se automaticky nastaví na: <plugin_url>
 
@@ -238,29 +238,29 @@ mediamtx:
     Pokud firewall spojení blokuje, povol na VPN rozhraní TCP port <port>.
   setup-hosting: |-
     Tento mediamtx.yml patří na externí počítač s MediaMTX.
-    Otevři na něm TCP port <port>. LuigiScreen používá oddělený účet pouze pro čtení.
+    Otevři na něm TCP port <port>. MTV používá oddělený účet pouze pro čtení.
   setup-security: |-
     Zabezpečení:
       Tento soubor uchovávej v soukromí. Obsahuje vygenerované přihlašovací údaje.
       RTSP, HLS, WebRTC, SRT a MoQ jsou vypnuté.
 
 updates:
-  available: "<yellow>Je dostupná novější verze LuigiScreen: <white><current> -> <latest></white>. Kliknutím otevřeš Modrinth.</yellow>"
-  open-modrinth: "<aqua>Otevřít stránku LuigiScreen na Modrinthu</aqua>"
+  available: "<yellow>Je dostupná novější verze MTV: <white><current> -> <latest></white>. Kliknutím otevřeš Modrinth.</yellow>"
+  open-modrinth: "<aqua>Otevřít stránku MTV na Modrinthu</aqua>"
 
 logs:
-  update-available: "Je dostupná novější verze LuigiScreen: <current> -> <latest>. <url>"
+  update-available: "Je dostupná novější verze MTV: <current> -> <latest>. <url>"
   update-check-failed: "Kontrola aktualizací na Modrinthu selhala: <error>"
   render-failed-screen: "Vykreslení plátna <screen> přes MapEngine selhalo: <error>"
   saved-screen-invalid-name: "Uložené plátno <screen> je neplatné a bylo přeskočeno."
   legacy-migrated: "Staré samostatné plátno bylo převedeno na screens.main."
-  reload-screen-preserved: "Plátno <screen> v configu chybí, proto zůstalo zachované. Pro smazání použij /screen remove <screen>."
+  reload-screen-preserved: "Plátno <screen> v configu chybí, proto zůstalo zachované. Pro smazání použij /mtv remove <screen>."
   reload-geometry-preserved: "Geometrie plátna <screen> byla v configu změněna. Existující plátno zůstalo zachované; pro změnu geometrie ho odstraň a vytvoř znovu."
   reload-stop-failed: "Opětovné načtení bylo zrušeno, protože se proces zdroje neukončil."
   reload-success: "Konfigurace, jazyk a plátno byly znovu načteny."
-  reload-failed: "LuigiScreen se nepodařilo znovu načíst: <error>"
+  reload-failed: "MTV se nepodařilo znovu načíst: <error>"
   remove-stop-failed: "Odstranění plátna bylo zrušeno, protože jeho proces zdroje stále běží."
-  saved-screen-invalid: "Uložená poloha plátna není platná. Použij znovu /screen create main 7 4."
+  saved-screen-invalid: "Uložená poloha plátna není platná. Použij znovu /mtv create main 7 4."
   saved-screen-too-large: "Uložené plátno překračuje nastavené limity. Uprav limity nebo ho vytvoř znovu."
   render-failed: "Vykreslení přes MapEngine selhalo: <error>"
   decoder-stop-failed: "Proces zdroje médií se bezpečně neukončil. Plátno zůstalo zachované."

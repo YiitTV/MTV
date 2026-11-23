@@ -4,18 +4,25 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cz.luigismp</groupId>
-    <artifactId>luigiscreen</artifactId>
-    <version>1.2.0-alpha.5</version>
+    <groupId>com.yiittv</groupId>
+    <artifactId>mtv</artifactId>
+    <version>1.0.0-alpha.1</version>
     <packaging>jar</packaging>
-    <name>LuigiScreen</name>
-    <description>A server-side Paper/Bukkit media screen and broadcast control plugin.</description>
-    <url>https://github.com/unknown-566/LuigiScreen</url>
+    <name>MTV</name>
+    <description>A Paper billboard and media screen plugin with Plasmo Voice audio. Unofficial modified build based on LuigiScreen.</description>
+    <url>https://github.com/YiitTV/MTV</url>
 
     <developers>
         <developer>
+            <id>YiitTV</id>
+            <name>YiitTV</name>
+        </developer>
+        <developer>
             <id>unknown_56</id>
             <name>unknown_56</name>
+            <roles>
+                <role>original LuigiScreen author</role>
+            </roles>
         </developer>
     </developers>
 
@@ -28,9 +35,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/unknown-566/LuigiScreen.git</connection>
-        <developerConnection>scm:git:https://github.com/unknown-566/LuigiScreen.git</developerConnection>
-        <url>https://github.com/unknown-566/LuigiScreen</url>
+        <connection>scm:git:https://github.com/YiitTV/MTV.git</connection>
+        <developerConnection>scm:git:https://github.com/YiitTV/MTV.git</developerConnection>
+        <url>https://github.com/YiitTV/MTV</url>
     </scm>
 
     <properties>
@@ -44,6 +51,10 @@
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>plasmoverse</id>
+            <url>https://repo.plasmoverse.com/releases/</url>
         </repository>
         <repository>
             <id>minceraft</id>
@@ -62,6 +73,12 @@
             <groupId>de.pianoman911</groupId>
             <artifactId>mapengine-api</artifactId>
             <version>1.8.12</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>su.plo.voice.api</groupId>
+            <artifactId>server</artifactId>
+            <version>2.1.17</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -118,7 +135,7 @@
     </dependencies>
 
     <build>
-        <finalName>LuigiScreen-${project.version}</finalName>
+        <finalName>MTV-${project.version}</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>

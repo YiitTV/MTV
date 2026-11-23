@@ -1,4 +1,4 @@
-prefix: "<dark_gray>[<green>LuigiScreen</green>]</dark_gray> "
+prefix: "<dark_gray>[<green>MTV</green>]</dark_gray> "
 
 common:
   none: "none"
@@ -8,26 +8,26 @@ common:
 
 commands:
   vote-player-only: "<red>Voting commands can only be used by a player.</red>"
-  vote-usage: "<red>Usage: /screen vote <screen> <option> or /screen vote start|status|end <screen> [options...]</red>"
+  vote-usage: "<red>Usage: /mtv vote <screen> <option> or /mtv vote start|status|end <screen> [options...]</red>"
   vote-started: "<green>A media vote started on <screen>.</green>"
   vote-ended: "<green>The vote on <screen> ended and its winner was queued.</green>"
   vote-cast: "<green>Your vote was recorded.</green>"
   vote-failed: "<red>The vote action for <screen> could not be completed.</red>"
   vote-status: "<gray>Vote on <screen>: <votes> votes; <results></gray>"
-  help-vote: "<white>/screen vote ...</white><gray> - starts, joins or ends a media vote</gray>"
+  help-vote: "<white>/mtv vote ...</white><gray> - starts, joins or ends a media vote</gray>"
   menu-player-only: "<red>Control Studio can only be opened by a player.</red>"
-  help-menu: "<white>/screen menu</white><gray> - opens LuigiScreen Control Studio</gray>"
-  web-link: "<green>Open LuigiScreen Studio (<label>):</green> <aqua><underlined><url></underlined></aqua>"
+  help-menu: "<white>/mtv menu</white><gray> - opens MTV Control Studio</gray>"
+  web-link: "<green>Open MTV Studio (<label>):</green> <aqua><underlined><url></underlined></aqua>"
   web-link-extra: "<gray>Backup link (<label>):</gray> <aqua><underlined><url></underlined></aqua>"
   web-hover: "<gray>One-time login link. It expires quickly and must not be shared.</gray>"
   web-status: "<gray>Web Studio: <white><status></white></gray>"
   web-revoked: "<green>Revoked <count> Web Studio session(s).</green>"
   web-lan-enabled: "<green>Web Studio was switched to LAN mode automatically. No manual config edit needed.</green>"
   web-firewall-tip: "<gray>If the LAN link will not load from another PC, allow TCP port 8765 for Java/OpenJDK in Windows Firewall on the server PC.</gray>"
-  web-unavailable: "<red>Web Studio could not start. Run /screen web status and check whether TCP port 8765 is free.</red>"
-  help-web: "<white>/screen web [open|status|revoke]</white><gray> - opens a secure browser Studio link</gray>"
+  web-unavailable: "<red>Web Studio could not start. Run /mtv web status and check whether TCP port 8765 is free.</red>"
+  help-web: "<white>/mtv web [open|status|revoke]</white><gray> - opens a secure browser Studio link</gray>"
   no-permission: "<red>You need <permission> to use this command.</red>"
-  no-display: "<red>Create a screen first: /screen create main 7 4</red>"
+  no-display: "<red>Create a screen first: /mtv create main 7 4</red>"
   screen-missing: "<red>Screen <screen> does not exist.</red>"
   target-required: "<red>More than one screen exists. Add a screen name or use all.</red>"
   invalid-name: "<red>Use a screen name containing only a-z, 0-9, _ or - (maximum 32 characters).</red>"
@@ -41,7 +41,7 @@ commands:
   reload-success: "<green>The configuration, language and screen were reloaded.</green>"
   reload-failed: "<red>Reload failed. Check the server console.</red>"
   debug-player-only: "<red>The debug boss bar can only be used by a player.</red>"
-  debug-enabled: "<green>Debug boss bar and sidebar enabled. Run /screen debug again to disable them.</green>"
+  debug-enabled: "<green>Debug boss bar and sidebar enabled. Run /mtv debug again to disable them.</green>"
   debug-disabled: "<green>Debug boss bar and sidebar disabled.</green>"
   mediamtx-player-only: "<red>The MediaMTX setup wizard can only be used by a player.</red>"
   create-player-only: "<red>This command must be used by a player.</red>"
@@ -50,7 +50,7 @@ commands:
   create-look-at-wall: "<red>Look at the upper-left block of a vertical wall.</red>"
   create-success: "<green>Created screen <screen> at <width>x<height>. Starting its source...</green>"
   create-failed: "<red>The screen could not be created. Check its name, size and location.</red>"
-  clone-usage: "<red>Usage: /screen clone <source> <new-name></red>"
+  clone-usage: "<red>Usage: /mtv clone <source> <new-name></red>"
   clone-success: "<green>Cloned <source> as <screen>. Both screens share one loader while their source type and value match.</green>"
   clone-failed: "<red>The screen could not be cloned at this location.</red>"
   list-header: "<green><screens> screen(s), <sources> shared source(s):</green>"
@@ -60,44 +60,44 @@ commands:
   screen-removed: "<green>Screen <screen> was removed.</green>"
   all-started: "<green>Enabled <count> screen(s).</green>"
   all-stopped: "<green>Disabled <count> screen(s).</green>"
-  set-usage: "<red>Usage: /screen set <name> <url|fps|distance|enabled|permission> <value></red>"
+  set-usage: "<red>Usage: /mtv set <name> <url|fps|distance|enabled|permission> <value></red>"
   set-success: "<green>Updated <property> for screen <screen>.</green>"
   set-invalid: "<red>Invalid value for <property>. FPS: 0.1-20, distance: 8-1024, enabled/permission: true/false.</red>"
-  source-usage: "<red>Usage: /screen source <name> <rtmp|mjpeg|video|image|url-image|gif> <value></red>"
+  source-usage: "<red>Usage: /mtv source <name> <rtmp|mjpeg|video|image|url-image|gif> <value></red>"
   source-current: "<gray>Screen <screen> uses <white><type></white>: <value></gray>"
   source-types: "<gray>Available source types: <types></gray>"
-  source-invalid: "<red>Invalid source type or value. Use /screen source <name> types.</red>"
+  source-invalid: "<red>Invalid source type or value. Use /mtv source <name> types.</red>"
   source-success: "<green>Screen <screen> now uses <type>: <value></green>"
   source-failed: "<red>Could not switch the source for screen <screen>. The previous source was kept.</red>"
   source-folder: "<gray>Local media folder: <folder></gray>"
-  playlist-usage: "<red>Usage: /screen playlist list|set <screen> <playlist>|clear <screen></red>"
+  playlist-usage: "<red>Usage: /mtv playlist list|set <screen> <playlist>|clear <screen></red>"
   playlist-empty: "<gray>No playlists are configured.</gray>"
   playlist-list: "<gray>Configured playlists: <playlists></gray>"
   playlist-set: "<green>Screen <screen> now uses playlist <playlist>.</green>"
   playlist-failed: "<red>Could not assign playlist <playlist> to screen <screen>.</red>"
   playlist-cleared: "<green>Screen <screen> returned to its configured source.</green>"
   playlist-clear-failed: "<red>Could not clear the playlist for screen <screen>.</red>"
-  event-usage: "<red>Usage: /screen event list|play <screen> <event>|stop <screen></red>"
+  event-usage: "<red>Usage: /mtv event list|play <screen> <event>|stop <screen></red>"
   event-empty: "<gray>No events are configured.</gray>"
   event-list: "<gray>Configured events: <events></gray>"
   event-started: "<green>Playing event <event> on screen <screen>.</green>"
   event-failed: "<red>Could not play event <event> on screen <screen>.</red>"
   event-stopped: "<green>Stopped the active event on screen <screen>.</green>"
   event-stop-failed: "<red>Could not stop the active event on screen <screen>.</red>"
-  help-create: "<white>/screen create <name> [width] [height]</white><gray> - creates a named screen on a wall</gray>"
-  help-clone: "<white>/screen clone <source> <new-name></white><gray> - creates another screen sharing the source</gray>"
-  help-control: "<white>/screen list|status [name]|start|stop <name|all>|remove <name>|reload</white>"
-  help-source: "<white>/screen source <name> <type> <value></white><gray> - switches RTMP, MJPEG, video, image, URL image or GIF</gray>"
-  help-playback: "<white>/screen playlist ... | /screen event ...</white><gray> - rotates media or plays a manual event scene</gray>"
-  help-set: "<white>/screen set <name> <url|fps|distance|enabled|permission> <value></white>"
-  help-debug: "<white>/screen debug</white><gray> - toggles the live performance boss bar and sidebar</gray>"
-  help-mediamtx: "<white>/screen mediamtx <argument></white><gray> - generates a guided MediaMTX configuration</gray>"
+  help-create: "<white>/mtv create <name> [width] [height]</white><gray> - creates a named screen on a wall</gray>"
+  help-clone: "<white>/mtv clone <source> <new-name></white><gray> - creates another screen sharing the source</gray>"
+  help-control: "<white>/mtv list|status [name]|start|stop <name|all>|remove <name>|reload</white>"
+  help-source: "<white>/mtv source <name> <type> <value></white><gray> - switches RTMP, MJPEG, video, image, URL image or GIF</gray>"
+  help-playback: "<white>/mtv playlist ... | /mtv event ...</white><gray> - rotates media or plays a manual event scene</gray>"
+  help-set: "<white>/mtv set <name> <url|fps|distance|enabled|permission> <value></white>"
+  help-debug: "<white>/mtv debug</white><gray> - toggles the live performance boss bar and sidebar</gray>"
+  help-mediamtx: "<white>/mtv mediamtx <argument></white><gray> - generates a guided MediaMTX configuration</gray>"
   mediamtx-argument: "situation"
 
 status:
   no-display: "<gray>No screen has been created.</gray>"
   missing: "<red>Screen <screen> does not exist.</red>"
-  summary: "<gray><screens> screen(s), <enabled> enabled, <sources> shared source(s), <maps> total maps. Use /screen list or /screen status <name>.</gray>"
+  summary: "<gray><screens> screen(s), <enabled> enabled, <sources> shared source(s), <maps> total maps. Use /mtv list or /mtv status <name>.</gray>"
   line: "<gray>Screen <name> <width>x<height>, enabled: <enabled>, protected: <permission_required> (<view_permission>), source: <source_type> <source_value>, playlist: <playlist>, playback: <playback>, state: <stream>, shared by: <shared>, source error: <stream_error>, effective FPS: <fps>, distance: <distance>, viewers: <viewers>, received/rendered: <received>/<rendered>, render error: <render_error>, world: <world>, facing: <facing></gray>"
 
 playback:
@@ -107,8 +107,8 @@ playback:
   event-status: "event <event>, item <item>"
 
 screen:
-  title: "LuigiSMP"
-  offline-title: "LuigiScreen"
+  title: "MTV"
+  offline-title: "MTV"
   connecting: "Connecting..."
   loading: "Loading source..."
   stopped: "Source stopped"
@@ -145,8 +145,8 @@ errors:
   stream_ended: "stream ended"
 
 debug:
-  starting: "LuigiScreen debug starting..."
-  sidebar-title: "<green><bold>LuigiScreen Debug</bold></green>"
+  starting: "MTV debug starting..."
+  sidebar-title: "<green><bold>MTV Debug</bold></green>"
   sidebar-stream: "<gray>Source:</gray> <white><state></white>"
   sidebar-source: "<gray>Source:</gray> <white><resolution></white> <dark_gray>(<age>)</dark_gray>"
   sidebar-screen: "<gray>Screens/src:</gray> <white><enabled>/<screens> / <sources></white> <dark_gray>(<width>x<height>)</dark_gray>"
@@ -167,7 +167,7 @@ debug:
   frames: "[FRAMES] In <received> (<received_fps>/s) | Out <rendered> (<rendered_fps>/s) | Replaced <replaced> (<replaced_fps>/s) | Queue <queue>"
   render: "[RENDER] Last <last> ms | Average <average> ms | Budget <budget> ms"
   memory: "[MEMORY] JVM heap <heap_used>/<heap_max> | Non-heap <non_heap> | System <system_used>/<system_total>"
-  buffers: "[BUFFERS] LuigiScreen images ~<buffers> | Native FFmpeg and MapEngine memory is not tracked"
+  buffers: "[BUFFERS] MTV images ~<buffers> | Native FFmpeg and MapEngine memory is not tracked"
   cpu: "[CPU] Process <process> | System <system> | Threads <threads>"
   server: "[SERVER] TPS <tps> | MSPT <mspt> | Uptime <uptime> | GC <collections>/<gc_time> ms"
   health: "[HEALTH] Load attempts <reconnects> | Source error <stream_error> | Render error <render_error>"
@@ -182,11 +182,11 @@ mediamtx:
   failed: "<red>MediaMTX setup failed. Check the server console.</red>"
   private-answer: "<dark_gray>Your next chat message is private to the setup wizard. Type cancel to stop.</dark_gray>"
   choose: "<yellow>Choose a MediaMTX situation:</yellow>"
-  option-same-pc: "<white>/screen mediamtx same-pc - everything runs on one computer</white>"
-  option-lan: "<white>/screen mediamtx lan - OBS is on another computer in the same network</white>"
-  option-internet: "<white>/screen mediamtx internet - OBS connects through public IP and port forwarding</white>"
-  option-vpn: "<white>/screen mediamtx vpn - CGNAT, Tailscale or ZeroTier</white>"
-  option-hosting: "<white>/screen mediamtx hosting - MediaMTX runs on another server</white>"
+  option-same-pc: "<white>/mtv mediamtx same-pc - everything runs on one computer</white>"
+  option-lan: "<white>/mtv mediamtx lan - OBS is on another computer in the same network</white>"
+  option-internet: "<white>/mtv mediamtx internet - OBS connects through public IP and port forwarding</white>"
+  option-vpn: "<white>/mtv mediamtx vpn - CGNAT, Tailscale or ZeroTier</white>"
+  option-hosting: "<white>/mtv mediamtx hosting - MediaMTX runs on another server</white>"
   invalid-host: "<red>Enter a valid IPv4 address or hostname. Type cancel to stop.</red>"
   invalid-public-host: "<red>Enter your public IPv4 address or DNS hostname. Type cancel to stop.</red>"
   invalid-vpn-host: "<red>Enter a valid VPN IP address or hostname. Type cancel to stop.</red>"
@@ -202,7 +202,7 @@ mediamtx:
   prompt-hosting-host: "<gold>Enter the public IP or DNS hostname of the external MediaMTX server:</gold>"
   prompt-hosting-port: "<gold>Enter the external MediaMTX RTMP port (or type default):</gold>"
   setup-header: |-
-    LuigiScreen MediaMTX setup
+    MTV MediaMTX setup
     ==========================
 
     Situation: <situation>
@@ -217,7 +217,7 @@ mediamtx:
       Stream key: leave empty
       Use authentication: disabled
 
-    LuigiScreen:
+    MTV:
       The global default URL and screens still using the previous default
       are updated automatically to: <plugin_url>
 
@@ -238,7 +238,7 @@ mediamtx:
     Allow inbound TCP <port> on the VPN interface if the firewall blocks it.
   setup-hosting: |-
     This mediamtx.yml belongs on the external MediaMTX machine.
-    Open TCP <port> there. LuigiScreen has been configured with a separate
+    Open TCP <port> there. MTV has been configured with a separate
     read-only account.
   setup-security: |-
     Security:
@@ -246,17 +246,17 @@ mediamtx:
       RTSP, HLS, WebRTC, SRT and MoQ are disabled.
 
 updates:
-  available: "<yellow>A newer LuigiScreen version is available: <white><current> -> <latest></white>. Click this message to open Modrinth.</yellow>"
-  open-modrinth: "<aqua>Open the LuigiScreen page on Modrinth</aqua>"
+  available: "<yellow>A newer MTV version is available: <white><current> -> <latest></white>. Click this message to open Modrinth.</yellow>"
+  open-modrinth: "<aqua>Open the MTV page on Modrinth</aqua>"
 
 logs:
-  update-available: "A newer LuigiScreen version is available: <current> -> <latest>. <url>"
+  update-available: "A newer MTV version is available: <current> -> <latest>. <url>"
   update-check-failed: "Could not check Modrinth for updates: <error>"
   reload-stop-failed: "Reload cancelled because a source worker did not stop."
   reload-success: "Configuration, language and screen were reloaded."
-  reload-failed: "Could not reload LuigiScreen: <error>"
+  reload-failed: "Could not reload MTV: <error>"
   remove-stop-failed: "Screen removal cancelled because its source worker is still running."
-  saved-screen-invalid: "Saved screen location is invalid. Use /screen create main 7 4 again."
+  saved-screen-invalid: "Saved screen location is invalid. Use /mtv create main 7 4 again."
   saved-screen-too-large: "Saved screen exceeds the configured size limits. Adjust screen limits or create it again."
   render-failed: "MapEngine render failed: <error>"
   render-failed-screen: "MapEngine render failed for screen <screen>: <error>"
@@ -265,7 +265,7 @@ logs:
   mediamtx-failed: "MediaMTX setup failed: <error>"
   saved-screen-invalid-name: "Saved screen <screen> is invalid and was skipped."
   legacy-migrated: "Migrated the legacy single screen to screens.main."
-  reload-screen-preserved: "Screen <screen> is missing from config and was preserved. Use /screen remove <screen> to delete it."
+  reload-screen-preserved: "Screen <screen> is missing from config and was preserved. Use /mtv remove <screen> to delete it."
   reload-geometry-preserved: "Screen <screen> geometry changed in config. Its existing display was preserved; remove and recreate it to change geometry."
 
 studio:
