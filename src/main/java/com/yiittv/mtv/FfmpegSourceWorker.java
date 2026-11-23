@@ -473,6 +473,11 @@ final class FfmpegSourceWorker implements SourceWorker {
                     TimeUnit.SECONDS.toMicros(ioTimeoutSeconds)));
         }
         if (source.type() == SourceType.LIVE) {
+            // YouTube HLS segment URLs carry no file extension; FFmpeg 7's HLS demuxer rejects
+            // them with "Invalid data" unless the extension check is relaxed.
+            grabber.setOption("extension_picky", "0");
+            grabber.setOption("allowed_extensions", "ALL");
+            grabber.setOption("allowed_segment_extensions", "ALL");
             grabber.setOption("reconnect", "1");
             grabber.setOption("reconnect_streamed", "1");
             grabber.setOption("reconnect_delay_max", "5");
