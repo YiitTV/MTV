@@ -165,6 +165,27 @@ point one or more billboards at a YouTube link:
 - Only show streams you own or have permission to rebroadcast.
 - `/mtv skip` jumps to the next item of a loop or playlist.
 
+## Quality
+
+```text
+/mtv quality spawn_billboard high
+/mtv quality source 720
+/mtv set spawn_billboard dithering true
+```
+
+| Preset | FPS | Dithering |
+| --- | --- | --- |
+| `low` | 4 | off |
+| `medium` | 8 | off |
+| `high` | 12 | on |
+| `ultra` | 20 | on |
+
+- Higher FPS sends more map updates to every nearby player; dithering costs CPU.
+- `/mtv quality source <360|480|720|1080>` caps the resolution of new YouTube
+  downloads (use `refresh` to re-download) and of the next live connection.
+- The Plasmo Voice speaker icon at screen audio sources is hidden by default
+  (`audio.show-icon`).
+
 ## Looping several videos
 
 `/mtv loop` builds a playlist from YouTube links and media files and loops it on
@@ -226,7 +247,7 @@ The shaded plugin JAR is created in `target/`.
 
 ## Verification
 
-The current suite contains 81 automated tests covering:
+The current suite contains 83 automated tests covering:
 
 - RTMP URL and error-message sanitization
 - Screen corner calculation for every vertical direction

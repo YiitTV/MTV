@@ -65,7 +65,7 @@ final class ManagedScreen {
         this.drawing.ctx().buffering(false);
         this.drawing.ctx().bundling(false);
         this.glowing = plugin.getConfig().getBoolean("screen.glowing-frames", false);
-        this.dithering = plugin.getConfig().getBoolean("screen.dithering", false);
+        this.dithering = ditheringSetting();
         this.display.glowing(glowing);
         this.drawing.ctx().converter(
                 dithering ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
@@ -92,7 +92,7 @@ final class ManagedScreen {
         boolean updatedGlowing =
                 plugin.getConfig().getBoolean("screen.glowing-frames", false);
         boolean updatedDithering =
-                plugin.getConfig().getBoolean("screen.dithering", false);
+                ditheringSetting();
         if (currentDisplay != null && updatedGlowing != glowing) {
             despawnTrackedViewers(currentDisplay);
             currentDisplay.glowing(updatedGlowing);
@@ -105,6 +105,13 @@ final class ManagedScreen {
         }
         reloadPerformanceSettings();
         forceFullFrame.set(true);
+    }
+
+    /** Per-screen dithering override, falling back to the global screen.dithering. */
+    private boolean ditheringSetting() {
+        boolean global = plugin.getConfig().getBoolean("screen.dithering", false);
+        return plugin.getConfig().getBoolean(
+                "screens." + definition.id() + ".dithering", global);
     }
 
     void prepareViewerResync() {

@@ -443,6 +443,30 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         return true;
     }
 
+    boolean setScreenDithering(String id, boolean dithering) {
+        ManagedScreen screen = screens.get(ScreenDefinition.normalizeId(id));
+        if (screen == null) {
+            return false;
+        }
+        getConfig().set("screens." + screen.id() + ".dithering", dithering);
+        saveConfig();
+        screen.reloadRenderingSettings();
+        return true;
+    }
+
+    /** Applies an FPS + dithering preset to one screen. */
+    boolean applyQualityPreset(String id, QualityPreset preset) {
+        return preset != null && setScreenFps(id, preset.fps())
+                && setScreenDithering(id, preset.dithering());
+    }
+
+    /** Caps the resolution yt-dlp picks for YouTube downloads and live streams. */
+    void setSourceResolution(int height) {
+        getConfig().set("youtube.format", QualityPreset.youtubeFormat(height));
+        getConfig().set("live.format", QualityPreset.liveFormat(height));
+        saveConfig();
+    }
+
     boolean setScreenFps(String id, double fps) {
         ManagedScreen screen = screens.get(ScreenDefinition.normalizeId(id));
         if (screen == null || fps < 0.1 || fps > 20) {

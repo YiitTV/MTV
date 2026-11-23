@@ -139,6 +139,8 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
         McServerWorld voiceWorld = server.getMinecraftServer().getWorld(world);
         ServerStaticSource source = line.createStaticSource(
                 new ServerPos3d(voiceWorld, x, y, z), false);
+        // Plasmo draws the source icon at the emitter, which is the middle of the screen.
+        source.setIconVisible(plugin.getConfig().getBoolean("audio.show-icon", false));
         Channel channel = new Channel(line, source);
         AudioSender sender = source.createAudioSender(channel,
                 () -> (short) Math.max(1, Math.min(Short.MAX_VALUE, distance.distance())));

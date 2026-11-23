@@ -21,10 +21,11 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
             "create", "clone", "list", "start", "stop", "remove",
-            "status", "source", "live", "playlist", "loop", "skip", "event", "set", "reload", "debug",
+            "status", "source", "live", "playlist", "loop", "skip", "quality", "event", "set", "reload", "debug",
             "mediamtx", "menu", "studio", "web", "vote");
     private static final List<String> SET_PROPERTIES =
-            List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance");
+            List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance",
+                    "dithering");
     private final MtvPlugin plugin;
 
     ScreenCommand(MtvPlugin plugin) {
@@ -59,6 +60,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             case "playlist" -> playlist(sender, args);
             case "loop" -> loop(sender, args);
             case "skip" -> skip(sender, args);
+            case "quality" -> quality(sender, args);
             case "live" -> live(sender, args);
             case "event" -> event(sender, args);
             case "set" -> set(sender, args);
@@ -358,6 +360,46 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                 message(sender, "commands.source-failed", "screen", String.join(", ", failed));
             }
         });
+    }
+
+    /**
+     * /mtv quality <billboard[,billboard2]> <low|medium|high|ultra>
+     * /mtv quality source <360|480|720|1080>
+     */
+    private void quality(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            message(sender, "commands.quality-usage");
+            return;
+        }
+        if (args[1].equalsIgnoreCase("source") || args[1].equalsIgnoreCase("kaynak")) {
+            Integer height = null;
+            try {
+                height = Integer.parseInt(args[2].toLowerCase(Locale.ROOT).replace("p", ""));
+            } catch (NumberFormatException ignored) {
+            }
+            if (height == null || !QualityPreset.SOURCE_HEIGHTS.contains(height)) {
+                message(sender, "commands.quality-usage");
+                return;
+            }
+            plugin.setSourceResolution(height);
+            message(sender, "commands.quality-source", "height", height);
+            return;
+        }
+        QualityPreset preset = QualityPreset.parse(args[2]);
+        if (preset == null) {
+            message(sender, "commands.quality-usage");
+            return;
+        }
+        List<String> targets = screenTargets(sender, args[1]);
+        if (targets == null) {
+            return;
+        }
+        for (String target : targets) {
+            plugin.applyQualityPreset(target, preset);
+        }
+        message(sender, "commands.quality-set", "screens", String.join(", ", targets),
+                "preset", preset.id(), "fps", format(preset.fps()),
+                "dithering", preset.dithering());
     }
 
     /** /mtv skip <billboard[,billboard2]> */
@@ -672,6 +714,10 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                 changed = value != null
                         && plugin.setScreenPermissionRequired(id, value);
             }
+            case "dithering" -> {
+                Boolean value = parseBoolean(args[3]);
+                changed = value != null && plugin.setScreenDithering(id, value);
+            }
             case "audio", "sound" -> {
                 Boolean value = parseBoolean(args[3]);
                 changed = value != null && plugin.setScreenAudio(id, value);
@@ -861,6 +907,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         message(sender, "commands.help-loop");
         message(sender, "commands.help-live");
         message(sender, "commands.help-skip");
+        message(sender, "commands.help-quality");
         message(sender, "commands.help-playback");
         message(sender, "commands.help-set");
         message(sender, "commands.help-debug");
@@ -969,6 +1016,16 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             types.add("types");
             return matching(types, args[2]);
         }
+        if (args.length == 2 && subcommand.equals("quality")) {
+            List<String> values = new ArrayList<>(plugin.screenIds());
+            values.add("source");
+            return matching(values, args[1]);
+        }
+        if (args.length == 3 && subcommand.equals("quality")) {
+            return matching(args[1].equalsIgnoreCase("source")
+                    ? List.of("360", "480", "720", "1080")
+                    : List.of("low", "medium", "high", "ultra"), args[2]);
+        }
         if (args.length == 2 && List.of("skip", "live").contains(subcommand)) {
             return matching(plugin.screenIds(), args[1]);
         }
@@ -1006,7 +1063,8 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         if (args.length == 4 && subcommand.equals("set")
                 && (args[2].equalsIgnoreCase("enabled")
                 || args[2].equalsIgnoreCase("permission")
-                || args[2].equalsIgnoreCase("audio"))) {
+                || args[2].equalsIgnoreCase("audio")
+                || args[2].equalsIgnoreCase("dithering"))) {
             return matching(List.of("true", "false"), args[3]);
         }
         return List.of();

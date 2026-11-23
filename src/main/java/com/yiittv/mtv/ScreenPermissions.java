@@ -23,6 +23,7 @@ public final class ScreenPermissions {
             Map.entry("loop", "mtv.playlist"),
             Map.entry("skip", "mtv.playlist"),
             Map.entry("live", "mtv.source"),
+            Map.entry("quality", "mtv.set"),
             Map.entry("event", "mtv.event"),
             Map.entry("set", "mtv.set"),
             Map.entry("reload", "mtv.reload"),

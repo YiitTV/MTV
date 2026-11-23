@@ -135,6 +135,9 @@ audio:
   default-distance: 32
   # Volume multiplier applied before encoding (0.0 - 2.0).
   volume: 1.0
+  # Plasmo Voice shows a speaker icon at each audio source. The source sits in the middle of
+  # the screen, so the icon is hidden by default to keep the picture clear.
+  show-icon: false
 
 screen:
   # Defaults used by newly created screens and by the legacy config migration.

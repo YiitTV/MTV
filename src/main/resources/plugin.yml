@@ -11,7 +11,7 @@ commands:
   mtv:
     description: Manage MTV media screens and Control Studio.
     aliases: [tv]
-    usage: /mtv <menu|web|create|clone|list|start|stop|remove|status|source|live|playlist|loop|skip|event|vote|set|reload|debug|mediamtx>
+    usage: /mtv <menu|web|create|clone|list|start|stop|remove|status|source|live|playlist|loop|skip|quality|event|vote|set|reload|debug|mediamtx>
 
 permissions:
   mtv.admin:
