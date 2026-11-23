@@ -125,6 +125,7 @@ status:
   missing: "<red>Screen <screen> does not exist.</red>"
   summary: "<gray><screens> screen(s), <enabled> enabled, <sources> shared source(s), <maps> total maps. Use /mtv list or /mtv status <name>.</gray>"
   audio: "<gray>Audio for <screen>: <enabled>, distance: <distance> blocks, emitter: <emitter>. Plasmo Voice: <backend></gray>"
+  audio-flow: "<gray>Audio flow: <flow></gray>"
   line: "<gray>Screen <name> <width>x<height>, enabled: <enabled>, protected: <permission_required> (<view_permission>), source: <source_type> <source_value>, playlist: <playlist>, playback: <playback>, state: <stream>, shared by: <shared>, source error: <stream_error>, effective FPS: <fps>, distance: <distance>, viewers: <viewers>, received/rendered: <received>/<rendered>, render error: <render_error>, world: <world>, facing: <facing></gray>"
 
 playback:

@@ -350,6 +350,7 @@ final class FfmpegSourceWorker implements SourceWorker {
                 while (running.get() && !Thread.currentThread().isInterrupted()) {
                     Frame frame = grabber.grabSamples();
                     if (frame == null) {
+                        sharedSource.reportAudioError("live audio playlist ended");
                         return;
                     }
                     if (frame.samples == null || frame.samples.length == 0
@@ -383,8 +384,11 @@ final class FfmpegSourceWorker implements SourceWorker {
                     view.get(scratch, 0, count);
                     sharedSource.publishAudio(scratch, count);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception exception) {
                 // The video grabber owns reconnects; audio simply stops until the next one.
+                if (running.get() && !Thread.currentThread().isInterrupted()) {
+                    sharedSource.reportAudioError("live audio: " + compactError(exception));
+                }
             }
         });
     }

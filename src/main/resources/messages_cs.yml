@@ -125,6 +125,7 @@ status:
   summary: "<gray>Plátna: <screens>, zapnutá: <enabled>, sdílené zdroje: <sources>, celkem map: <maps>. Použij /mtv list nebo /mtv status <název>.</gray>"
   no-display: "<gray>Žádné plátno nebylo vytvořeno.</gray>"
   audio: "<gray>Zvuk plátna <screen>: <enabled>, dosah: <distance> bloků, zdroj zvuku: <emitter>. Plasmo Voice: <backend></gray>"
+  audio-flow: "<gray>Tok zvuku: <flow></gray>"
   line: "<gray>Plátno <name> <width>x<height>, zapnuto: <enabled>, chráněné: <permission_required> (<view_permission>), zdroj: <source_type> <source_value>, playlist: <playlist>, přehrávání: <playback>, stav: <stream>, sdílí pláten: <shared>, chyba zdroje: <stream_error>, efektivní FPS: <fps>, vzdálenost: <distance>, diváci: <viewers>, přijaté/vykreslené: <received>/<rendered>, chyba vykreslení: <render_error>, svět: <world>, směr: <facing></gray>"
 
 playback:

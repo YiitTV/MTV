@@ -163,6 +163,13 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         return mediaDurations;
     }
 
+    String audioDiagnostics(String id) {
+        ManagedScreen screen = screens.get(ScreenDefinition.normalizeId(id));
+        SharedMediaSource source = screen == null ? null : attachedSource(screen);
+        return (source == null ? "no decoder" : source.audioDiagnostics())
+                + "; emitter: " + audio.channelDiagnostics(id);
+    }
+
     ScreenAudioManager.ScreenAudioSettings screenAudio(String id) {
         return audio.settings(id);
     }

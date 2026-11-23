@@ -187,6 +187,10 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
         private final BlockingQueue<byte[]> frames = new ArrayBlockingQueue<>(MAX_BUFFERED_FRAMES);
         private volatile AudioSender sender;
         private volatile boolean closed;
+        private final java.util.concurrent.atomic.AtomicLong offered =
+                new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong provided =
+                new java.util.concurrent.atomic.AtomicLong();
         private long lastFrameNanos = System.nanoTime();
         private boolean streamEnded = true;
 
@@ -208,6 +212,7 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
             byte[] frame = frames.poll();
             long now = System.nanoTime();
             if (frame != null) {
+                provided.incrementAndGet();
                 lastFrameNanos = now;
                 streamEnded = false;
                 return new AudioFrameResult.Provided(frame);
@@ -224,9 +229,24 @@ public final class PlasmoVoiceAudio implements ScreenAudioOutput, AddonInitializ
             if (closed || frame == null) {
                 return;
             }
+            offered.incrementAndGet();
             while (!frames.offer(frame)) {
                 frames.poll();
             }
+        }
+
+        @Override
+        public String diagnostics() {
+            int listeners = 0;
+            try {
+                for (Object ignored : source.getListeners((short) 512)) {
+                    listeners++;
+                }
+            } catch (RuntimeException exception) {
+                listeners = -1;
+            }
+            return offered.get() + " queued, " + provided.get() + " sent to Plasmo, "
+                    + listeners + " voice listener(s) within 512 blocks";
         }
 
         @Override

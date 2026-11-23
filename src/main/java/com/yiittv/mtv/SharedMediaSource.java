@@ -22,6 +22,10 @@ final class SharedMediaSource {
     private AudioFramer audioFramer;
     private ScreenAudioOutput.AudioFrameEncoder audioEncoder;
     private long nextEncoderAttemptNanos;
+    private final AtomicLong audioSamplesIn = new AtomicLong();
+    private final AtomicLong audioFramesEncoded = new AtomicLong();
+    private final AtomicLong audioEncodeFailures = new AtomicLong();
+    private volatile String audioError = "none";
 
     SharedMediaSource(MtvPlugin plugin, ScreenSource source) {
         this.plugin = plugin;
@@ -84,6 +88,7 @@ final class SharedMediaSource {
 
     /** Accepts decoded mono 16-bit PCM at {@link ScreenAudioManager#sampleRate()}. */
     void publishAudio(short[] samples, int count) {
+        audioSamplesIn.addAndGet(Math.max(0, count));
         synchronized (audioLock) {
             ScreenAudioManager audio = plugin.audio();
             if (audioEncoder == null) {
@@ -93,6 +98,7 @@ final class SharedMediaSource {
                 }
                 audioEncoder = audio.createEncoder();
                 if (audioEncoder == null) {
+                    audioError = "Opus encoder unavailable";
                     // Plasmo Voice may still be starting; retry at most once per second.
                     nextEncoderAttemptNanos = now + TimeUnit.SECONDS.toNanos(1);
                     return;
@@ -103,8 +109,11 @@ final class SharedMediaSource {
             audioFramer.accept(samples, count, frame -> {
                 byte[] encoded = encoder.encode(frame);
                 if (encoded == null) {
+                    audioEncodeFailures.incrementAndGet();
+                    audioError = "encode/encrypt failed";
                     return;
                 }
+                audioFramesEncoded.incrementAndGet();
                 for (ManagedScreen screen : screens) {
                     if (screen.enabled() && screen.audioEnabled()) {
                         audio.offer(screen.id(), encoded);
@@ -112,6 +121,17 @@ final class SharedMediaSource {
                 }
             });
         }
+    }
+
+    void reportAudioError(String error) {
+        audioError = error == null || error.isBlank() ? "none" : error;
+    }
+
+    /** "samples in / frames encoded / failures / last error" for /mtv status. */
+    String audioDiagnostics() {
+        return audioSamplesIn.get() + " samples, " + audioFramesEncoded.get()
+                + " frames encoded, " + audioEncodeFailures.get() + " failed, error: "
+                + StreamUrlSanitizer.mask(audioError);
     }
 
     /** Releases the encoder; called whenever the decoder disconnects or stops. */

@@ -161,6 +161,11 @@ final class ScreenAudioManager {
         }
     }
 
+    String channelDiagnostics(String screenId) {
+        OpenChannel open = channels.get(ScreenDefinition.normalizeId(screenId));
+        return open == null ? "no emitter" : open.channel().diagnostics();
+    }
+
     void flush(String screenId) {
         OpenChannel open = channels.get(ScreenDefinition.normalizeId(screenId));
         if (open != null) {

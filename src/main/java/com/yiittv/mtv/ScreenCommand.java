@@ -245,6 +245,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                     "distance", audio.distance(),
                     "emitter", plugin.audio().channelOpen(id) ? "on" : "off",
                     "backend", plugin.audio().status());
+            message(sender, "status.audio-flow", "flow", plugin.audioDiagnostics(id));
         }
     }
 

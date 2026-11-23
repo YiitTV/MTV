@@ -11,6 +11,10 @@ interface ScreenAudioChannel {
 
     void close();
 
+    default String diagnostics() {
+        return "";
+    }
+
     @FunctionalInterface
     interface DistanceSupplier {
         int distance();
