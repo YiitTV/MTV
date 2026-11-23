@@ -104,6 +104,16 @@ events:
         text: "Waiting for operator"
         duration: 1s
 
+youtube:
+  # /mtv source <billboard> youtube <link> downloads the video once with yt-dlp into
+  # media/youtube/<id>.mp4 and loops it like a local video. Install yt-dlp on the server
+  # (https://github.com/yt-dlp/yt-dlp) or set its full path here.
+  yt-dlp-path: "yt-dlp"
+  # Format 18 is a single 360p MP4 with audio, enough for map screens and needs no FFmpeg merge.
+  format: "18/best[ext=mp4][vcodec!=none][acodec!=none]"
+  max-filesize: "500M"
+  timeout-seconds: 600
+
 audio:
   # Positional screen audio through Plasmo Voice (players need the Plasmo Voice mod).
   # Audio is decoded only for screens that have audio enabled. Without the PlasmoVoice

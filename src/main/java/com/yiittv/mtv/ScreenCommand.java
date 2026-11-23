@@ -248,6 +248,10 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             message(sender, "commands.source-usage");
             return;
         }
+        if (args.length >= 3 && List.of("youtube", "yt").contains(args[2].toLowerCase(Locale.ROOT))) {
+            youtubeSource(sender, args);
+            return;
+        }
         String id = ScreenDefinition.normalizeId(args[1]);
         ScreenDefinition definition = plugin.screenDefinition(id);
         if (definition == null) {
@@ -293,6 +297,64 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
                         "folder", plugin.mediaDirectoryDisplay());
             }
         }
+    }
+
+    private void youtubeSource(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            message(sender, "commands.youtube-usage");
+            return;
+        }
+        List<String> targets = new ArrayList<>();
+        for (String raw : args[1].split(",")) {
+            String id = ScreenDefinition.normalizeId(raw);
+            if (id.isBlank()) {
+                continue;
+            }
+            if (!plugin.hasScreen(id)) {
+                message(sender, "commands.screen-missing", "screen", id);
+                return;
+            }
+            if (!targets.contains(id)) {
+                targets.add(id);
+            }
+        }
+        if (targets.isEmpty()) {
+            message(sender, "commands.youtube-usage");
+            return;
+        }
+        String videoId = YoutubeDownloader.videoId(args[3]).orElse(null);
+        if (videoId == null) {
+            message(sender, "commands.youtube-invalid");
+            return;
+        }
+        boolean refresh = args.length > 4 && List.of("refresh", "yenile")
+                .contains(args[4].toLowerCase(Locale.ROOT));
+        String screens = String.join(", ", targets);
+        message(sender, "commands.youtube-downloading", "video", videoId, "screens", screens);
+        plugin.youtube().ensure(videoId, refresh, result -> {
+            if (!result.ok()) {
+                message(sender, "commands.youtube-failed", "video", videoId,
+                        "error", result.error());
+                return;
+            }
+            ScreenSource source = new ScreenSource(SourceType.VIDEO, result.mediaPath());
+            List<String> failed = new ArrayList<>();
+            for (String target : targets) {
+                if (!plugin.setScreenSource(target, source)) {
+                    failed.add(target);
+                }
+            }
+            if (plugin.studio() != null) {
+                plugin.studio().refreshMediaAsync();
+            }
+            if (failed.isEmpty()) {
+                message(sender, result.cached()
+                                ? "commands.youtube-cached" : "commands.youtube-success",
+                        "video", videoId, "screens", screens, "file", result.mediaPath());
+            } else {
+                message(sender, "commands.source-failed", "screen", String.join(", ", failed));
+            }
+        });
     }
 
     private void playlist(CommandSender sender, String[] args) {
@@ -594,6 +656,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         message(sender, "commands.help-clone");
         message(sender, "commands.help-control");
         message(sender, "commands.help-source");
+        message(sender, "commands.help-youtube");
         message(sender, "commands.help-playback");
         message(sender, "commands.help-set");
         message(sender, "commands.help-debug");
@@ -698,6 +761,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 3 && subcommand.equals("source")) {
             List<String> types = new ArrayList<>(SourceType.commandNames());
+            types.add("youtube");
             types.add("types");
             return matching(types, args[2]);
         }

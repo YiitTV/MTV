@@ -127,6 +127,25 @@ Screens are public by default. Enable protection with:
 Then grant `mtv.see.main` or `mtv.see.*` through the server's
 permission plugin.
 
+## YouTube videos on billboards
+
+Billboards are named screens. Create each one while looking at its wall, then
+point one or more billboards at a YouTube link:
+
+```text
+/mtv create spawn_billboard 7 4
+/mtv create market_billboard 5 3
+/mtv source spawn_billboard,market_billboard youtube https://youtu.be/VIDEO_ID
+/mtv source spawn_billboard youtube https://youtu.be/VIDEO_ID refresh
+```
+
+- MTV downloads the video once with [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+  into `media/youtube/<id>.mp4` and loops it as a local video. Every billboard
+  showing the same link shares that file and one decoder.
+- yt-dlp must be installed on the server (`youtube.yt-dlp-path` in `config.yml`).
+- `refresh` downloads the video again, for example after you re-upload it.
+- Only show videos you own or have the right to show; YouTube's terms apply.
+
 ## Audio (Plasmo Voice)
 
 MTV can play the audio of videos and RTMP streams at the screen position
@@ -164,7 +183,7 @@ The shaded plugin JAR is created in `target/`.
 
 ## Verification
 
-The current suite contains 72 automated tests covering:
+The current suite contains 75 automated tests covering:
 
 - RTMP URL and error-message sanitization
 - Screen corner calculation for every vertical direction
@@ -186,6 +205,7 @@ The current suite contains 72 automated tests covering:
 - media thumbnail generation
 - Web Studio JSON serialization, login security and bundled resources
 - Audio framing, volume and audio distance limits
+- YouTube link parsing and yt-dlp command construction
 
 ## Platform limits
 

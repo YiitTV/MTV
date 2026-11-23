@@ -48,6 +48,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
     private final Map<String, ScreenSource> activeSources = new ConcurrentHashMap<>();
     private final java.util.Set<String> frameOnlyScreens = ConcurrentHashMap.newKeySet();
     private final ScreenAudioManager audio = new ScreenAudioManager(this);
+    private final YoutubeDownloader youtube = new YoutubeDownloader(this);
     private MapEngineApi mapEngine;
     private DebugBossBarManager debugBossBars;
     private MediaMtxSetupManager mediaMtxSetup;
@@ -96,6 +97,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         loadScreens();
         saveConfig();
         audio.start();
+        youtube.start();
         startRenderExecutor();
         viewerTask = Bukkit.getScheduler().runTaskTimer(this, this::refreshViewers, 20L, 20L);
         playbackController.reload();
@@ -139,6 +141,7 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
         requestStopAllSources();
         stopAllSources();
         audio.stop();
+        youtube.shutdown();
         destroyScreens();
         stopRenderExecutor();
     }
@@ -149,6 +152,10 @@ public final class MtvPlugin extends JavaPlugin implements Listener {
 
     ScreenAudioManager audio() {
         return audio;
+    }
+
+    YoutubeDownloader youtube() {
+        return youtube;
     }
 
     ScreenAudioManager.ScreenAudioSettings screenAudio(String id) {
