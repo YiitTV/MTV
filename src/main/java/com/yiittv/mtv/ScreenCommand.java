@@ -21,7 +21,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
             "create", "clone", "list", "start", "stop", "remove",
-            "status", "source", "live", "playlist", "loop", "skip", "quality", "event", "set", "reload", "debug",
+            "status", "source", "live", "playlist", "loop", "skip", "quality", "cpu", "event", "set", "reload", "debug",
             "mediamtx", "menu", "studio", "web", "vote");
     private static final List<String> SET_PROPERTIES =
             List.of("url", "fps", "distance", "enabled", "permission", "audio", "audio-distance",
@@ -61,6 +61,7 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
             case "loop" -> loop(sender, args);
             case "skip" -> skip(sender, args);
             case "quality" -> quality(sender, args);
+            case "cpu" -> cpu(sender);
             case "live" -> live(sender, args);
             case "event" -> event(sender, args);
             case "set" -> set(sender, args);
@@ -401,6 +402,32 @@ final class ScreenCommand implements CommandExecutor, TabCompleter {
         message(sender, "commands.quality-set", "screens", String.join(", ", targets),
                 "preset", preset.id(), "fps", format(preset.fps()),
                 "dithering", preset.dithering());
+    }
+
+    /** /mtv cpu: 5 second CPU breakdown by thread group, measured off the main thread. */
+    private void cpu(CommandSender sender) {
+        if (!CpuSampler.supported()) {
+            sender.sendMessage("Thread CPU time is not supported by this JVM.");
+            return;
+        }
+        sender.sendMessage("[MTV] Measuring CPU for 5 seconds...");
+        Thread.ofVirtual().start(() -> {
+            try {
+                java.util.Map<String, Double> groups = CpuSampler.sample(5_000);
+                List<String> lines = CpuSampler.format(groups,
+                        Runtime.getRuntime().availableProcessors());
+                org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+                    for (String line : lines) {
+                        sender.sendMessage("[MTV] " + line);
+                        if (!(sender instanceof org.bukkit.command.ConsoleCommandSender)) {
+                            plugin.getLogger().info("cpu: " + line);
+                        }
+                    }
+                });
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     /** /mtv skip <billboard[,billboard2]> */

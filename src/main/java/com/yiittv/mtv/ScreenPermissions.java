@@ -24,6 +24,7 @@ public final class ScreenPermissions {
             Map.entry("skip", "mtv.playlist"),
             Map.entry("live", "mtv.source"),
             Map.entry("quality", "mtv.set"),
+            Map.entry("cpu", "mtv.debug"),
             Map.entry("event", "mtv.event"),
             Map.entry("set", "mtv.set"),
             Map.entry("reload", "mtv.reload"),
