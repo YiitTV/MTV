@@ -92,6 +92,18 @@ final class ManagedScreen {
         definition = value;
         nextRenderNanos = 0;
         reloadPerformanceSettings();
+        // The source type decides whether dithering applies (see ditheringSetting).
+        applyDithering();
+    }
+
+    private void applyDithering() {
+        IDrawingSpace currentDrawing = drawing;
+        boolean updated = ditheringSetting();
+        if (currentDrawing != null && updated != dithering) {
+            currentDrawing.ctx().converter(updated ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
+            dithering = updated;
+            forceFullFrame.set(true);
+        }
     }
 
     void reloadRenderingSettings() {
@@ -99,8 +111,7 @@ final class ManagedScreen {
         IDrawingSpace currentDrawing = drawing;
         boolean updatedGlowing =
                 plugin.getConfig().getBoolean("screen.glowing-frames", false);
-        boolean updatedDithering =
-                ditheringSetting();
+        boolean updatedDithering = ditheringSetting();
         if (currentDisplay != null && updatedGlowing != glowing) {
             despawnTrackedViewers(currentDisplay);
             currentDisplay.glowing(updatedGlowing);
@@ -115,11 +126,23 @@ final class ManagedScreen {
         forceFullFrame.set(true);
     }
 
-    /** Per-screen dithering override, falling back to the global screen.dithering. */
+    /**
+     * Per-screen dithering override, falling back to the global screen.dithering. Moving
+     * pictures (video, streams, GIFs) are never dithered: Floyd-Steinberg costs a lot of CPU
+     * on every frame, and its noise changes every frame, so nearly every pixel is resent.
+     * Still images keep it, because they are converted only once.
+     */
     private boolean ditheringSetting() {
+        if (!ditheringAllowed(definition.source().type())) {
+            return false;
+        }
         boolean global = plugin.getConfig().getBoolean("screen.dithering", false);
         return plugin.getConfig().getBoolean(
                 "screens." + definition.id() + ".dithering", global);
+    }
+
+    static boolean ditheringAllowed(SourceType type) {
+        return type == SourceType.IMAGE || type == SourceType.URL_IMAGE;
     }
 
     void prepareViewerResync() {

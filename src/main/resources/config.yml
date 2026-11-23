@@ -144,6 +144,8 @@ screen:
   auto-start: true
   viewer-distance: 64
   glowing-frames: false
+  # Only used for still images (image, url-image). Videos, streams and GIFs are never
+  # dithered: it costs CPU on every frame and its noise defeats delta map updates.
   dithering: false
   max-width: 10
   max-height: 6

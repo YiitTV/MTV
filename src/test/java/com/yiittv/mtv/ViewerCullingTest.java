@@ -4,6 +4,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.util.BlockVector;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +38,14 @@ class ViewerCullingTest {
     void closeViewersAlwaysReceiveUpdates() {
         double[] box = {0, 60, 10, 7, 64, 11};
         assertTrue(looks(3.5, 62, 8.5, 0, 0, -1, box));
+    }
+
+    @Test
+    void onlyStillImagesAreDithered() {
+        for (SourceType type : SourceType.values()) {
+            assertEquals(type == SourceType.IMAGE || type == SourceType.URL_IMAGE,
+                    ManagedScreen.ditheringAllowed(type), type.name());
+        }
     }
 
     private static boolean looks(double x, double y, double z,
